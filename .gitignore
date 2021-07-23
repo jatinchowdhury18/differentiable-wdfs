@@ -1,0 +1,9 @@
+# cpp build artifacts
+build/
+
+# python artifacts
+__pycache__
+
+# other extras
+.vscode
+*.png
