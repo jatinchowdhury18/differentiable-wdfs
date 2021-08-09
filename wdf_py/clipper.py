@@ -19,6 +19,21 @@ x = x[:N]
 y_ref = y_ref[:N]
 
 # %%
+def create_root_model():
+    n_layers = 3
+    layer_size = 8
+    layer_xs = []
+    inputs = wdf.tf.keras.Input(shape=(2,))
+    for n in range(n_layers):
+        layer_in = inputs if n < 1 else layer_xs[n-1]
+        layer_width = layer_size if n < n_layers - 1 else 1
+        layer_act = 'relu' if n < n_layers - 1 else 'linear'
+        layer_xs.append(wdf.tf.keras.layers.Dense(layer_width,
+                                                  activation=layer_act,
+                                                  kernel_initializer='orthogonal')(layer_in))
+    return wdf.tf.keras.Model(inputs=inputs, outputs=layer_xs[-1])
+
+# %%
 class ClipperModel(wdf.tf.Module):
     def __init__(self):
         super(ClipperModel, self).__init__('Clipper')
@@ -26,22 +41,10 @@ class ClipperModel(wdf.tf.Module):
         self.R = wdf.Resistor(10.0e3)
         self.P1 = wdf.WDFParallel(self.Vs, self.R)
 
-        n_layers = 3
-        layer_size = 8
-        self.layer_xs = []
-        self.inputs = wdf.tf.keras.Input(shape=(2,))
-        for n in range(n_layers):
-            layer_in = self.inputs if n < 1 else self.layer_xs[n-1]
-            layer_width = layer_size if n < n_layers - 1 else 1
-            layer_act = 'relu' if n < n_layers - 1 else 'linear'
-            self.layer_xs.append(wdf.tf.keras.layers.Dense(layer_width,
-                                                           activation=layer_act,
-                                                           kernel_initializer='orthogonal')(layer_in))
-            
-        self.root_model = wdf.tf.keras.Model(inputs=self.inputs, outputs=self.layer_xs[-1])
+        self.root_model = create_root_model()
         self.root_model.summary()
 
-    @wdf.tf.function
+    # @wdf.tf.function
     def __call__(self, x):
         y = []
         for n in range(x.shape[-1]):
@@ -85,7 +88,7 @@ def training_loop(model, x, y, num_epochs):
         print("Epoch %2d: loss=%2.5f" % (epoch, current_loss))
 
 # %%
-training_loop(model, x_in, y_ref, 10)
+training_loop(model, x_in, y_ref, 100)
 y_test = model(x_in).numpy().flatten()
 
 # %%
@@ -96,13 +99,25 @@ plt.savefig(f'{BASE_DIR}/final.png')
 plt.show()
 
 # %%
+def diode_pair_func(x):
+    a = x[0, 0]
+    nextR = x[0, 1]
+    Vt = 25.85e-3
+    R_Is = nextR * 1.0e-9
+    R_Is_overVt = R_Is / Vt
+    logR_Is_overVt = np.log(R_Is_overVt)
+    lamb = np.sign(a)
+    b = a + 2 * lamb * (R_Is - Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
+    return np.float32(b)
+
+# %%
 N = 100
 test_x = np.linspace(-5, 5, N)
 test_x = np.stack([test_x, np.ones(N) * 1.0e-9]).transpose()
 
 ideal_y = np.zeros(N)
 for n in range(N):
-    ideal_y[n] = model.diode_pair_func(np.array([test_x[n,:]]))
+    ideal_y[n] = diode_pair_func(np.array([test_x[n,:]]))
 
 model_y = model.root_model(test_x).numpy().flatten()
 
