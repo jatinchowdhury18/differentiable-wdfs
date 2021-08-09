@@ -29,7 +29,7 @@ for n in range(N):
 plt.plot(test_x[:,0], ideal_y)
 
 # %%
-n_layers = 2
+n_layers = 3
 layer_size = 8
 layer_xs = []
 inputs = tf.keras.Input(shape=(2,))
@@ -40,7 +40,7 @@ for n in range(n_layers):
     layer_xs.append(tf.keras.layers.Dense(layer_width,
                                           activation=layer_act,
                                           kernel_initializer='orthogonal')(layer_in))
-            
+
 diode_model = tf.keras.Model(inputs=inputs, outputs=layer_xs[-1])
 diode_model.summary()
 # %%
@@ -67,7 +67,7 @@ def training_loop(model, x, y, num_epochs, batch_size=32):
 # %%
 optimizer = tf.keras.optimizers.Adam(learning_rate=1e-2)
 diode_model.compile(optimizer, loss_func)
-diode_model.fit(test_x, ideal_y, epochs=10)
+diode_model.fit(test_x, ideal_y, epochs=20)
 
 # training_loop(diode_model, test_x, ideal_y, 10)
 
