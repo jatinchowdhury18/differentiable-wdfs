@@ -7,14 +7,14 @@ class WDF(tf.Module):
         self.R = tf.Variable(1.0e-6)
         self.G = tf.Variable(1.0e6)
 
-        self.b = tf.Variable(0.0)
-        self.a = tf.Variable(0.0)
+        self.b = tf.Variable(0.0) # reflected wave
+        self.a = tf.Variable(0.0) # incident wave
 
-    # @tf.function
+    @tf.function
     def voltage(self):
         return 0.5 * (self.a + self.b)
 
-    # @tf.function
+    @tf.function
     def current(self):
         return (0.5 * self.G) * (self.a - self.b)
 
@@ -24,13 +24,13 @@ class Resistor(WDF):
         self.R = tf.Variable(value)
         self.G = tf.Variable(1.0 / value)
 
-    # @tf.function
+    @tf.function
     def incident(self, x):
         self.a = x
 
-    # @tf.function
+    @tf.function
     def reflected(self):
-        self.b = tf.Variable(0.0)
+        self.b = tf.zeros_like(self.b)
         return self.b
 
 class ResistiveVoltageSource(WDF):
@@ -39,15 +39,15 @@ class ResistiveVoltageSource(WDF):
         self.R = tf.Variable(value)
         self.G = tf.Variable(1.0 / value)
 
-    # @tf.function
+    @tf.function
     def set_voltage(self, new_voltage):
         self.Vs = new_voltage
 
-    # @tf.function
+    @tf.function
     def incident(self, x):
         self.a = x
 
-    # @tf.function
+    @tf.function
     def reflected(self):
         self.b = self.Vs
         return self.b
@@ -59,21 +59,21 @@ class WDFSeries(WDF):
         self.p2 = p2
         self.calc_impedance()
 
-    # @tf.function
+    @tf.function
     def calc_impedance(self):
         self.R = self.p1.R + self.p2.R
-        self.G = tf.Variable(1.0 / self.R)
+        self.G = tf.math.reciprocal(self.R)
         self.p1Reflect = self.p1.R / self.R
         self.p2Reflect = self.p2.R / self.R
 
-    # @tf.function
+    @tf.function
     def incident(self, x):
         b1 = self.p1.b - self.p1Reflect * (x + self.p1.b + self.p2.b)
         self.p1.incident(b1)
         self.p2.incident(-(x * b1))
         self.a = x
 
-    # @tf.function
+    @tf.function
     def reflected(self):
         self.b = -(self.p1.reflected() + self.p2.reflected())
         return self.b
@@ -85,21 +85,21 @@ class WDFParallel(WDF):
         self.p2 = p2
         self.calc_impedance()
 
-    # @tf.function
+    @tf.function
     def calc_impedance(self):
         self.G = self.p1.G + self.p2.G
-        self.R = tf.Variable(1.0 / self.G)
+        self.R = tf.math.reciprocal(self.G)
         self.p1Reflect = self.p1.G / self.G
         self.p2Reflect = self.p2.G / self.G
 
-    # @tf.function
+    @tf.function
     def incident(self, x):
         b2 = x + self.b_temp
         self.p1.incident(self.b_diff + b2)
         self.p2.incident(b2)
         self.a = x
 
-    # @tf.function
+    @tf.function
     def reflected(self):
         self.p1.reflected()
         self.p2.reflected()

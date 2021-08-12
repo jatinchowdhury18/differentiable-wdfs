@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 # %%
 BASE_DIR='/Users/jachowdhury/Developer/differentiable-wdfs'
+# BASE_DIR='/user/j/jatin/Documents/differentiable-wdfs'
 x = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_x.csv", dtype=np.float32)
 y_ref = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_y.csv", dtype=np.float32)
 
@@ -44,7 +45,7 @@ class ClipperModel(wdf.tf.Module):
         self.root_model = create_root_model()
         self.root_model.summary()
 
-    # @wdf.tf.function
+    @wdf.tf.function
     def __call__(self, x):
         y = []
         for n in range(x.shape[-1]):
