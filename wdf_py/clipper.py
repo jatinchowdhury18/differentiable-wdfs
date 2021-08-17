@@ -4,10 +4,10 @@ from scipy.special import wrightomega
 import matplotlib.pyplot as plt
 import tf_wdf as wdf
 from tqdm import tqdm
+import pathlib
 
 # %%
-BASE_DIR='/Users/jachowdhury/Developer/differentiable-wdfs'
-# BASE_DIR='/user/j/jatin/Documents/differentiable-wdfs'
+BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
 x = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_x.csv", dtype=np.float32)
 y_ref = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_y.csv", dtype=np.float32)
 
@@ -32,33 +32,67 @@ def create_root_model():
         layer_xs.append(wdf.tf.keras.layers.Dense(layer_width,
                                                   activation=layer_act,
                                                   kernel_initializer='orthogonal')(layer_in))
-    return wdf.tf.keras.Model(inputs=inputs, outputs=layer_xs[-1])
+
+    return [inputs, layer_xs]
+    # return wdf.tf.keras.Model(inputs=inputs, outputs=layer_xs[-1])
 
 # %%
 class ClipperModel(wdf.tf.Module):
     def __init__(self):
         super(ClipperModel, self).__init__('Clipper')
-        self.Vs = wdf.ResistiveVoltageSource()
-        self.R = wdf.Resistor(10.0e3)
-        self.P1 = wdf.WDFParallel(self.Vs, self.R)
+        self.Vs = wdf.ResistiveVoltageSource('Vs')
+        self.R = wdf.Resistor('R1', 10.0e3)
+        self.P1 = wdf.WDFParallel('P1', self.Vs, self.R)
 
-        self.root_model = create_root_model()
-        self.root_model.summary()
+        in_shape_1 = (None, 2)
+        self.layer_1 = wdf.tf.keras.layers.Dense(8,
+                                                 activation='relu',
+                                                 kernel_initializer='orthogonal')
+        self.layer_1.build(in_shape_1)
+
+        in_shape_2 = self.layer_1.compute_output_shape(in_shape_1)
+        self.layer_2 = wdf.tf.keras.layers.Dense(8,
+                                                 activation='relu',
+                                                 kernel_initializer='orthogonal')
+        self.layer_2.build(in_shape_2)
+        
+        in_shape_3 = self.layer_2.compute_output_shape(in_shape_2)
+        self.layer_3 = wdf.tf.keras.layers.Dense(1,
+                                                 activation='linear',
+                                                 kernel_initializer='orthogonal')
+        self.layer_3.build(in_shape_3)
+
+        
+        self.trainables = [
+            self.layer_1.kernel,
+            self.layer_1.bias,
+            self.layer_2.kernel,
+            self.layer_2.bias,
+            self.layer_3.kernel,
+            self.layer_3.bias,
+        ]
+
 
     @wdf.tf.function
     def __call__(self, x):
-        y = []
+        N = x.shape[-1]
+        y = wdf.tf.TensorArray(wdf.tf.float32, size=N)
         for n in range(x.shape[-1]):
             self.Vs.set_voltage(x[:,n])
             a = self.P1.reflected()
 
             in_vec = wdf.tf.stack([a, [self.P1.R]], axis=1)
-            b = self.root_model(in_vec)
+
+            b = self.layer_1(in_vec)
+            b = self.layer_2(b)
+            b = self.layer_3(b)
+            
+            # b = self.root_model(in_vec)
             # b = wdf.tf.numpy_function(diode_pair_func, [in_vec], wdf.tf.float32)
 
             self.P1.incident(b)
-            y.append(self.R.voltage())
-        return wdf.tf.stack(y)
+            y.write(n, self.R.voltage())
+        return y.stack()
 
 model = ClipperModel()
 x_in = np.array([x.transpose()])
@@ -75,11 +109,13 @@ def train(model, x, y, optimizer):
 
     # Use the gradient tape to automatically retrieve
     # the gradients of the trainable variables with respect to the loss.
-    grads = tape.gradient(current_loss, model.root_model.trainable_weights)
+    # grads = tape.gradient(current_loss, model.root_model.trainable_weights)
+    grads = tape.gradient(current_loss, model.trainables)
 
     # Run one step of gradient descent by updating
     # the value of the variables to minimize the loss.
-    optimizer.apply_gradients(zip(grads, model.root_model.trainable_weights))
+    # optimizer.apply_gradients(zip(grads, model.root_model.trainable_weights))
+    optimizer.apply_gradients(zip(grads, model.trainables))
 
 def training_loop(model, x, y, num_epochs):
     optimizer = wdf.tf.keras.optimizers.Adam(learning_rate=1e-2)
@@ -89,7 +125,7 @@ def training_loop(model, x, y, num_epochs):
         print("Epoch %2d: loss=%2.5f" % (epoch, current_loss))
 
 # %%
-training_loop(model, x_in, y_ref, 100)
+training_loop(model, x_in, y_ref, 10)
 y_test = model(x_in).numpy().flatten()
 
 # %%
