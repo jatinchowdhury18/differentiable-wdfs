@@ -52,15 +52,22 @@ class ClipperModel(tf.Module):
         N = x.shape[-1]
         y = tf.TensorArray(tf.float32, size=N)
         for n in range(x.shape[-1]):
+            # set inputs to WDF tree
             self.Vs.set_voltage(x[:,n])
+
+            # WDF tree "forward" pass
             a = self.P1.reflected()
 
+            # compute WDF root
             in_vec = tf.stack([a, [self.P1.R]], axis=1)
             b = self.root_model(in_vec)
             
             # b = tf.numpy_function(diode_pair_func, [in_vec], tf.float32)
 
+            # WDF tree "backwards" pass
             self.P1.incident(b)
+
+            # get output from WDF tree
             y.write(n, self.R.voltage())
         return y.stack()
 
