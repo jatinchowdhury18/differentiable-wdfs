@@ -20,6 +20,24 @@ class IdealVoltageSource(tf.Module):
         self.b = -self.a + tf.constant(2.0) * self.Vs
         return self.b
 
+class ResistiveVoltageSource(tf.Module):
+    def __init__(self, initial_R = 1.0e-9, trainable = False):
+        super(ResistiveVoltageSource, self).__init__()
+        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
+        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+
+        self.R = tf.Variable(initial_value=initial_R, name='resistance', trainable=trainable)
+
+    def set_voltage(self, voltage):
+        self.Vs = voltage
+
+    def incident(self, x):
+        self.a = x
+
+    def reflected(self):
+        self.b = self.Vs
+        return self.b
+
 class Resistor(tf.Module):
     def __init__(self, initial_R, trainable = False):
         super(Resistor, self).__init__()
@@ -57,6 +75,38 @@ class Series(tf.Module):
         
     def reflected(self):
         self.b = -(self.P1.reflected() + self.P2.reflected())
+        return self.b
+
+class Parallel(tf.Module):
+    def __init__(self, P1, P2):
+        super(Parallel, self).__init__()
+        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
+        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+
+        self.P1 = P1
+        self.P2 = P2
+
+    def calc_impedance(self):
+        G1 = 1.0 / self.P1.R
+        G2 = 1.0 / self.P2.R
+        G = G1 + G2
+
+        self.R = 1.0 / G
+        self.p1R = G1 / G
+
+    def incident(self, x):
+        b2 = x + self.b_temp
+        self.P1.incident(self.b_diff + b2)
+        self.P2.incident(b2)
+        self.a = x
+        
+    def reflected(self):
+        b1 = self.P1.reflected()
+        b2 = self.P2.reflected()
+
+        self.b_diff = b2 - b1
+        self.b_temp = -self.p1R * self.b_diff
+        self.b = b2 + self.b_temp
         return self.b
 
 class Inverter(tf.Module):

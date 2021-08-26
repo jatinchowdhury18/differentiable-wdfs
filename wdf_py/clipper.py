@@ -2,8 +2,8 @@
 import numpy as np
 from scipy.special import wrightomega
 import matplotlib.pyplot as plt
-import tf_wdf_z as wdf
-from tf_wdf_z import tf
+import tf_wdf as wdf
+from tf_wdf import tf
 from tqdm import tqdm
 import pathlib
 
@@ -21,120 +21,127 @@ x = x[:N]
 y_ref = y_ref[:N]
 
 # %%
-def create_root_model():
-    n_layers = 3
-    layer_size = 8
-    layer_xs = []
-    inputs = tf.keras.Input(shape=(2,))
-    for n in range(n_layers):
-        layer_in = inputs if n < 1 else layer_xs[n-1]
-        layer_width = layer_size if n < n_layers - 1 else 1
-        layer_act = 'relu' if n < n_layers - 1 else 'linear'
-        layer_xs.append(tf.keras.layers.Dense(layer_width,
-                                                  activation=layer_act,
-                                                  kernel_initializer='orthogonal')(layer_in))
-    
-    return tf.keras.Model(inputs=inputs, outputs=layer_xs[-1])
+class DenseLayer(tf.Module):
+    """ Dense layer without weights sharing"""
+    def __init__(self, batch_size, in_size, out_size):
+        super(DenseLayer, self).__init__()
+        bs = batch_size
+        self.kernel = tf.Variable(self.init_weights(bs, in_size, out_size), dtype=tf.float32)
+        self.bias = tf.Variable(self.init_bias(bs, out_size), dtype=tf.float32)
+
+    def init_weights(self, batch_size, size1, size2):
+        initializer = tf.keras.initializers.Orthogonal()
+        init = initializer(shape=(size1, size2))
+        return [init for b in range(batch_size)]
+
+    def init_bias(self, batch_size, size):
+        initializer = tf.keras.initializers.Zeros()
+        init = initializer(shape=(size))
+        return [init for b in range(batch_size)]
+
+    def __call__(self, input):
+        return tf.matmul(input, self.kernel) + self.bias
+
+class RootModel(tf.Module):
+    def __init__(self, n_layers, hidden_dim, activation='relu', batch_size=1):
+        super(RootModel, self).__init__()
+        self.layers = []
+
+        # self.layers.append(MyLayer)
+        # self.layers.append(MyLayer)
+
+        for n in range(n_layers):
+            in_size = 1 if n == 0 else hidden_dim
+            out_size = 1 if n == n_layers - 1 else hidden_dim
+            self.layers.append(DenseLayer(batch_size, in_size, out_size))
+
+            if n < n_layers - 1:
+                self.layers.append(tf.nn.relu)
+
+    def forward(self, input):
+        for l in self.layers:
+            input = l(input)
+
+        return input
 
 # %%
 class ClipperModel(tf.Module):
     def __init__(self):
-        super(ClipperModel, self).__init__('Clipper')
-        self.Vs = wdf.ResistiveVoltageSource('Vs')
-        self.R = wdf.Resistor('R1', 10.0e3)
-        self.P1 = wdf.WDFParallel('P1', self.Vs, self.R)
+        super(ClipperModel, self).__init__()
+        self.Vs = wdf.ResistiveVoltageSource()
+        self.R = wdf.Resistor(10.0e3)
+        self.P1 = wdf.Parallel(self.Vs, self.R)
 
-        self.root_model = create_root_model()
-        self.root_model.summary()
+        self.model = RootModel(10, 16)
 
-    @tf.function
-    def __call__(self, x):
-        N = x.shape[-1]
-        y = tf.TensorArray(tf.float32, size=N)
-        for n in range(x.shape[-1]):
-            # set inputs to WDF tree
-            self.Vs.set_voltage(x[:,n])
+    def forward(self, input):
+        sequence_length = input.shape[1]
+        batch_size = input.shape[0]
+        input = tf.cast(tf.expand_dims(input, axis=-1), dtype=tf.float32)
+        output_sequence = tf.TensorArray(dtype=tf.float32, size=sequence_length, clear_after_read=False)
 
-            # WDF tree "forward" pass
+        self.P1.calc_impedance()
+        for i in range(sequence_length):
+            self.Vs.set_voltage(input[:, i])
+
             a = self.P1.reflected()
-
-            # compute WDF root
-            in_vec = tf.stack([a, [self.P1.R]], axis=1)
-            b = self.root_model(in_vec)
-            
-            # b = tf.numpy_function(diode_pair_func, [in_vec], tf.float32)
-
-            # WDF tree "backwards" pass
+            b = self.model.forward(a)
             self.P1.incident(b)
 
-            # get output from WDF tree
-            y.write(n, self.R.voltage())
-        return y.stack()
+            output = wdf.voltage(self.R)
+            output_sequence = output_sequence.write(i, output)
+        
+        output_sequence = output_sequence.stack()
+        return output_sequence
 
 model = ClipperModel()
-x_in = np.array([x.transpose()])
 
 # %%
-loss_func = tf.keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE)
-pre_loss = loss_func(y_ref, model(x_in)).numpy()
-print(f'Loss before training: {pre_loss}')
+batch_size = N
+n_batches = 1
+FS = 48000
+freq = 100
+
+data_in = np.array([x])
+data_in_batched = np.array(np.array_split(data_in[0], n_batches))
+data_target = np.transpose(np.array([y_ref]))
+
+print(data_in.shape)
+print(data_in_batched.shape)
+print(data_target.shape)
+
+plt.plot(data_in[0])
+plt.plot(data_in_batched[0])
+plt.plot(data_target[:,0])
 
 # %%
-def train(model, x, y, optimizer):
+loss_func = tf.keras.losses.MeanSquaredError()
+optimizer = tf.keras.optimizers.Nadam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
+
+# for epoch in tqdm(range(250)):
+for epoch in tqdm(range(100)):
     with tf.GradientTape() as tape:
-        current_loss = loss_func(y, model(x)) # compute loss
+        outs = model.forward(data_in)[...,0]
+        loss = loss_func(outs, data_target)
+    grads = tape.gradient(loss, model.trainable_variables)
 
-    # Use the gradient tape to automatically retrieve
-    # the gradients of the trainable variables with respect to the loss.
-    grads = tape.gradient(current_loss, model.root_model.trainable_weights)
+    if epoch % 5 == 0:
+        print(f'\nCheckpoint (Epoch = {epoch}):')
+        print(f'    Loss: {loss}')
+        # print(f'    Grads: {[g.numpy() for g in grads]}')
+        # print(f'    Trainables: {[t.numpy() for t in model.trainable_variables]}')
+    
+    optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    # Run one step of gradient descent by updating
-    # the value of the variables to minimize the loss.
-    optimizer.apply_gradients(zip(grads, model.root_model.trainable_weights))
-
-def training_loop(model, x, y, num_epochs):
-    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-2)
-    for epoch in tqdm(range(num_epochs)):
-        train(model, x, y, optimizer)
-        current_loss = loss_func(y, model(x))
-        print("Epoch %2d: loss=%2.5f" % (epoch, current_loss))
-
-# %%
-# ERROR here: no gradients provided for any variable
-training_loop(model, x_in, y_ref, 10)
-y_test = model(x_in).numpy().flatten()
+print(f'\nFinal Results:')
+print(f'    Loss: {loss}')
+# print(f'    Grads: {[g.numpy() for g in grads]}')
+# print(f'    Trainables: {[t.numpy() for t in model.trainable_variables]}')
 
 # %%
-plt.plot(x)
-plt.plot(y_ref)
-plt.plot(y_test, '--')
-plt.savefig(f'{BASE_DIR}/final.png')
-plt.show()
-
-# %%
-def diode_pair_func(x):
-    a = x[0, 0]
-    nextR = x[0, 1]
-    Vt = 25.85e-3
-    R_Is = nextR * 1.0e-9
-    R_Is_overVt = R_Is / Vt
-    logR_Is_overVt = np.log(R_Is_overVt)
-    lamb = np.sign(a)
-    b = a + 2 * lamb * (R_Is - Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
-    return np.float32(b)
-
-# %%
-N = 100
-test_x = np.linspace(-5, 5, N)
-test_x = np.stack([test_x, np.ones(N) * 1.0e-9]).transpose()
-
-ideal_y = np.zeros(N)
-for n in range(N):
-    ideal_y[n] = diode_pair_func(np.array([test_x[n,:]]))
-
-model_y = model.root_model(test_x).numpy().flatten()
-
-plt.plot(test_x[:,0], ideal_y)
-plt.plot(test_x[:,0], model_y, '--')
+outs = model.forward(data_in)[...,0].numpy().flatten()
+print(outs.shape)
+plt.plot(data_target[:,0])
+plt.plot(outs, '--')
 
 # %%

@@ -13,6 +13,7 @@ class Model(tf.Module):
         self.Vs = wdf.IdealVoltageSource()
         self.R1 = wdf.Resistor(1.0e3)
         self.R2 = wdf.Resistor(100.0, True)
+
         self.S1 = wdf.Series(self.R1, self.R2)
         self.I1 = wdf.Inverter(self.S1)
 
@@ -31,6 +32,7 @@ class Model(tf.Module):
 
             output = wdf.voltage(self.R1)
             output_sequence = output_sequence.write(i, output)
+        
         output_sequence = output_sequence.stack()
         return output_sequence
 
