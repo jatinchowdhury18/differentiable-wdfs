@@ -2,8 +2,8 @@
 import numpy as np
 from scipy.special import wrightomega
 import matplotlib.pyplot as plt
-import tf_wdf as wdf
-from tf_wdf import tf
+import tf_wdf_z as wdf
+from tf_wdf_z import tf
 from tqdm import tqdm
 import pathlib
 

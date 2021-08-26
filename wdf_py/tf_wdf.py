@@ -1,122 +1,80 @@
 import tensorflow as tf
 tf.get_logger().setLevel('WARN')
-from tensorflow.compat.v1 import variable_scope
 
-class WDF(tf.Module):
-    def __init__(self, name):
-        super(WDF, self).__init__(name=name)
-        self.name = name
+def voltage(wdf):
+    return (wdf.a + wdf.b) * tf.constant(0.5)
 
-        with variable_scope(self.name):
-            self.R = tf.Variable(1.0e-6)
-            self.G = tf.Variable(1.0e6)
+class IdealVoltageSource(tf.Module):
+    def __init__(self):
+        super(IdealVoltageSource, self).__init__()
+        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
+        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
 
-            self.b = tf.Variable(0.0) # reflected wave
-            self.a = tf.Variable(0.0) # incident wave
+    def set_voltage(self, voltage):
+        self.Vs = voltage
 
-    def voltage(self):
-        with variable_scope(self.name):
-            return 0.5 * (self.a + self.b)
+    def incident(self, x):
+        self.a = x
 
-    def current(self):
-        with variable_scope(self.name):
-            return (0.5 * self.G) * (self.a - self.b)
+    def reflected(self):
+        self.b = -self.a + tf.constant(2.0) * self.Vs
+        return self.b
 
-class Resistor(WDF):
-    def __init__(self, name, value):
-        super(Resistor, self).__init__(name)
+class Resistor(tf.Module):
+    def __init__(self, initial_R, trainable = False):
+        super(Resistor, self).__init__()
+        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
+        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+
+        self.R = tf.Variable(initial_value=initial_R, name='resistance', trainable=trainable)
+
+    def incident(self, x):
+        self.a = x
+
+    def reflected(self):
+        self.b = tf.zeros_like(self.b)
+        return self.b
+
+class Series(tf.Module):
+    def __init__(self, P1, P2):
+        super(Series, self).__init__()
+        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
+        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+
+        self.P1 = P1
+        self.P2 = P2
+
+    def calc_impedance(self):
+        self.R = self.P1.R + self.P2.R
+        self.p1R = self.P1.R / self.R
+        self.p2R = self.P2.R / self.R
+
+    def incident(self, x):
+        b1 = self.P1.b - self.p1R * (x + self.P1.b + self.P2.b)
+        self.P1.incident(b1)
+        self.P2.incident(-(x + b1))
+        self.a = x
         
-        with variable_scope(self.name):
-            self.R = tf.Variable(value)
-            self.G = tf.Variable(1.0 / value)
-
-    def incident(self, x):
-        with variable_scope(self.name):
-            self.a = x
-
     def reflected(self):
-        with variable_scope(self.name):
-            self.b = tf.zeros_like(self.b)
-            return self.b
+        self.b = -(self.P1.reflected() + self.P2.reflected())
+        return self.b
 
-class ResistiveVoltageSource(WDF):
-    def __init__(self, name, value = 1.0e-9):
-        super(ResistiveVoltageSource, self).__init__(name)
+class Inverter(tf.Module):
+    def __init__(self, P1):
+        super(Inverter, self).__init__()
+        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
+        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
 
-        with variable_scope(self.name):
-            self.R = tf.Variable(value)
-            self.G = tf.Variable(1.0 / value)
-
-    def set_voltage(self, new_voltage):
-        with variable_scope(self.name):
-            self.Vs = tf.identity(new_voltage)
-
-    def incident(self, x):
-        with variable_scope(self.name):
-            self.a = x
-
-    def reflected(self):
-        with variable_scope(self.name):
-            self.b = self.Vs
-            return self.b
-
-class WDFSeries(WDF):
-    def __init__(self, name, p1, p2):
-        super(WDFSeries, self).__init__(name)
-
-        with variable_scope(self.name):
-            self.p1 = p1
-            self.p2 = p2
-        self.calc_impedance()
+        self.P1 = P1
 
     def calc_impedance(self):
-        with variable_scope(self.name):
-            self.R = self.p1.R + self.p2.R
-            self.G = tf.math.reciprocal(self.R)
-            self.p1Reflect = self.p1.R / self.R
-            self.p2Reflect = self.p2.R / self.R
+        self.R = self.P1.R
 
     def incident(self, x):
-        with variable_scope(self.name):
-            b1 = self.p1.b - self.p1Reflect * (x + self.p1.b + self.p2.b)
-            self.p1.incident(b1)
-            self.p2.incident(-(x * b1))
-            self.a = x
-
+        self.P1.incident(-x)
+        self.a = x
+        
     def reflected(self):
-        with variable_scope(self.name):
-            self.b = -(self.p1.reflected() + self.p2.reflected())
-            return self.b
+        self.b = -self.P1.reflected()
+        return self.b
 
-class WDFParallel(WDF):
-    def __init__(self, name, p1, p2):
-        super(WDFParallel, self).__init__(name)
-
-        with variable_scope(self.name):
-            self.p1 = p1
-            self.p2 = p2
-        self.calc_impedance()
-
-    def calc_impedance(self):
-        with variable_scope(self.name):
-            self.G = self.p1.G + self.p2.G
-            self.R = tf.math.reciprocal(self.G)
-            self.p1Reflect = self.p1.G / self.G
-            self.p2Reflect = self.p2.G / self.G
-
-    def incident(self, x):
-        with variable_scope(self.name):
-            b2 = x + self.b_temp
-            self.p1.incident(self.b_diff + b2)
-            self.p2.incident(b2)
-            self.a = x
-
-    def reflected(self):
-        b1 = self.p1.reflected()
-        b2 = self.p2.reflected()
-
-        with variable_scope(self.name):
-            self.b_diff = b2 - b1
-            self.b_temp = -self.p1Reflect * self.b_diff
-            self.b = b2 + self.b_temp
-            return self.b
