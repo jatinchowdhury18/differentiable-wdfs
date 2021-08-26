@@ -2,10 +2,11 @@
 import numpy as np
 import tensorflow as tf
 import tqdm as tqdm
+import matplotlib.pyplot as plt
 
 # %%
 # based (pretty loosely) on this differentiable IIR script:
-# https://github.com/andreofner/APC/blob/7e3fc13afdef204465670c7e9b9589021ad89755/IIR.py
+# https://github.com/andreofner/APC/blob/master/IIR.py
 class IdealVoltageSource(tf.Module):
     def __init__(self):
         super(IdealVoltageSource, self).__init__()
@@ -72,31 +73,68 @@ class Model(tf.Module):
         self.S1 = Series(self.R1, self.R2)
 
     def forward(self, input):
-        self.Vs.set_voltage(input)
+        sequence_length = input.shape[1]
+        batch_size = input.shape[0]
+        input = tf.cast(tf.expand_dims(input, axis=-1), dtype=tf.float32)
+        output_sequence = tf.TensorArray(dtype=tf.float32, size=sequence_length, clear_after_read=False)
+
         self.S1.calc_impedance()
+        for i in range(sequence_length):
+            self.Vs.set_voltage(input[:, i])
 
-        self.Vs.incident(self.S1.reflected())
-        self.S1.incident(self.Vs.reflected())
+            self.Vs.incident(self.S1.reflected())
+            self.S1.incident(self.Vs.reflected())
 
-        return (self.R1.a + self.R1.b) * tf.constant(0.5)
+            output =  (self.R1.a + self.R1.b) * tf.constant(0.5)
+            output_sequence = output_sequence.write(i, output)
+        output_sequence = output_sequence.stack()
+        return output_sequence
 
 model = Model()
 
 # %%
+batch_size = 128
+n_batches = 5
+FS = 48000
+freq = 100
+
+data_in = np.array([np.sin(2 * np.pi * np.arange(batch_size * n_batches) * freq / FS)])
+data_in_batched = np.array(np.array_split(data_in[0], n_batches))
+data_target = np.transpose(data_in * -0.5)
+
+print(data_in.shape)
+print(data_in_batched.shape)
+print(data_target.shape)
+
+plt.plot(data_in[0])
+plt.plot(data_in_batched[0])
+plt.plot(data_target[:,0])
+
+# %%
 loss_func = tf.keras.losses.MeanSquaredError()
-optimizer = tf.keras.optimizers.Adam(learning_rate=5.0)
+optimizer = tf.keras.optimizers.Adam(learning_rate=25.0)
 
-data_in = np.array([10.0])
-data_target = np.array([-5.0])
-
-for epoch in tqdm.tqdm(range(1000)):
+for epoch in tqdm.tqdm(range(250)):
     with tf.GradientTape() as tape:
-        loss = loss_func(model.forward(data_in), data_target)
+        outs = model.forward(data_in)[...,0]
+        loss = loss_func(outs, data_target)
     grads = tape.gradient(loss, model.trainable_variables)
+
+    if epoch % 50 == 0:
+        print(f'\nCheckpoint (Epoch = {epoch}):')
+        print(f'    Loss: {loss}')
+        print(f'    Grads: {[g.numpy() for g in grads]}')
+        print(f'    Trainables: {[t.numpy() for t in model.trainable_variables]}')
+    
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-# y_test = model.forward(data_in)
-# print(f'Y = {y_test.numpy()}, L = {np.sum(loss.numpy())}, R = {model.trainable_variables[0].numpy()}')
-print(f'L = {np.sum(loss.numpy())}, R = {model.trainable_variables[0].numpy()}')
+print(f'\nFinal Results:')
+print(f'    Loss: {loss}')
+print(f'    Grads: {[g.numpy() for g in grads]}')
+print(f'    Trainables: {[t.numpy() for t in model.trainable_variables]}')
+# %%
+outs = model.forward(data_in)[...,0]
+plt.plot(data_target[:,0])
+plt.plot(outs, '--')
 
 # %%
