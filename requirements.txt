@@ -2,3 +2,4 @@ tensorflow==2.5.0
 scipy>=1.7.1
 matplotlib>=3.4.2
 tqdm>=4.62.0
+audio_dspy==0.0.4

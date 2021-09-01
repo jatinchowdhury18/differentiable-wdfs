@@ -28,6 +28,9 @@ class ResistiveVoltageSource(tf.Module):
 
         self.R = tf.Variable(initial_value=initial_R, name='resistance', trainable=trainable)
 
+    def calc_impedance(self):
+        pass
+
     def set_voltage(self, voltage):
         self.Vs = voltage
 
@@ -44,13 +47,41 @@ class Resistor(tf.Module):
         self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
         self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
 
-        self.R = tf.Variable(initial_value=initial_R, name='resistance', trainable=trainable)
+        self.R = tf.Variable(initial_value=initial_R, name='resistance', dtype=tf.float32,
+                             trainable=trainable, constraint=lambda z: tf.clip_by_value(z, 180.0, 1.0e6))
+
+    def calc_impedance(self):
+        pass
 
     def incident(self, x):
         self.a = x
 
     def reflected(self):
         self.b = tf.zeros_like(self.b)
+        return self.b
+
+class Capacitor(tf.Module):
+    def __init__(self, initial_C, FS, trainable = False):
+        super(Capacitor, self).__init__()
+        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
+        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+
+        self.FS = FS
+        self.C = tf.Variable(initial_value=initial_C, name='capacitance', dtype=tf.float32,
+                             trainable=trainable, constraint=lambda z: tf.clip_by_value(z, 0.1e-12, 1.0))
+        self.R = tf.Variable(initial_value=1.0 / (2.0 * initial_C * FS), name='impedance', trainable=False)
+        
+        self.z = tf.Variable(initial_value=0.0, name='state', trainable=False)
+
+    def calc_impedance(self):
+        self.R = tf.math.reciprocal(self.C * (2.0 * self.FS))
+
+    def incident(self, x):
+        self.a = x
+        self.z = self.a
+
+    def reflected(self):
+        self.b = self.z
         return self.b
 
 class Series(tf.Module):
@@ -63,6 +94,9 @@ class Series(tf.Module):
         self.P2 = P2
 
     def calc_impedance(self):
+        self.P1.calc_impedance()
+        self.P2.calc_impedance()
+
         self.R = self.P1.R + self.P2.R
         self.p1R = self.P1.R / self.R
         self.p2R = self.P2.R / self.R
@@ -87,6 +121,9 @@ class Parallel(tf.Module):
         self.P2 = P2
 
     def calc_impedance(self):
+        self.P1.calc_impedance()
+        self.P2.calc_impedance()
+
         G1 = 1.0 / self.P1.R
         G2 = 1.0 / self.P2.R
         G = G1 + G2
@@ -118,6 +155,7 @@ class Inverter(tf.Module):
         self.P1 = P1
 
     def calc_impedance(self):
+        self.P1.calc_impedance()
         self.R = self.P1.R
 
     def incident(self, x):
