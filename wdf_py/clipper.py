@@ -21,6 +21,23 @@ x = x[:N]
 y_ref = y_ref[:N]
 
 # %%
+n_batches = 1
+FS = 48000
+freq = 100
+
+data_in = np.array([x])
+data_in_batched = np.array(np.array_split(data_in[0], n_batches))
+data_target = np.transpose(np.array([y_ref]))
+
+print(data_in.shape)
+print(data_in_batched.shape)
+print(data_target.shape)
+
+plt.plot(data_in[0])
+plt.plot(data_in_batched[0])
+plt.plot(data_target[:,0])
+
+# %%
 class DenseLayer(tf.Module):
     """ Dense layer without weights sharing"""
     def __init__(self, batch_size, in_size, out_size):
@@ -47,9 +64,6 @@ class RootModel(tf.Module):
         super(RootModel, self).__init__()
         self.layers = []
 
-        # self.layers.append(MyLayer)
-        # self.layers.append(MyLayer)
-
         for n in range(n_layers):
             in_size = 1 if n == 0 else hidden_dim
             out_size = 1 if n == n_layers - 1 else hidden_dim
@@ -72,7 +86,7 @@ class ClipperModel(tf.Module):
         self.R = wdf.Resistor(10.0e3)
         self.P1 = wdf.Parallel(self.Vs, self.R)
 
-        self.model = RootModel(10, 16)
+        self.model = RootModel(8, 8)
 
     def forward(self, input):
         sequence_length = input.shape[1]
@@ -94,32 +108,39 @@ class ClipperModel(tf.Module):
         output_sequence = output_sequence.stack()
         return output_sequence
 
+# %%
 model = ClipperModel()
 
-# %%
-batch_size = N
-n_batches = 1
-FS = 48000
-freq = 100
+eps = np.finfo(float).eps
+def esr_loss(target_y, predicted_y, emphasis_func=lambda x : x):
+    target_yp = emphasis_func(target_y)
+    pred_yp = emphasis_func(predicted_y)
+    mse = tf.math.reduce_sum(tf.math.square(target_yp - pred_yp))
+    energy = tf.math.reduce_sum(tf.math.square(target_yp))
+    
+    loss_unnorm = mse / (energy + eps)
+    return loss_unnorm / N
 
-data_in = np.array([x])
-data_in_batched = np.array(np.array_split(data_in[0], n_batches))
-data_target = np.transpose(np.array([y_ref]))
+def avg_loss(target_y, pred_y):
+    target_mean = tf.math.reduce_mean(target_y)
+    pred_mean = tf.math.reduce_mean(pred_y)
+    return tf.math.abs(target_mean - pred_mean)
 
-print(data_in.shape)
-print(data_in_batched.shape)
-print(data_target.shape)
+def bounds_loss(target_y, pred_y):
+    target_min = tf.math.reduce_min(target_y)
+    target_max = tf.math.reduce_max(target_y)
+    pred_min = tf.math.reduce_min(pred_y)
+    pred_max = tf.math.reduce_max(pred_y)
+    return tf.math.abs(target_min - pred_min) + tf.math.abs(target_max - pred_max)
 
-plt.plot(data_in[0])
-plt.plot(data_in_batched[0])
-plt.plot(data_target[:,0])
-
-# %%
-loss_func = tf.keras.losses.MeanSquaredError()
+mse_loss = tf.keras.losses.MeanSquaredError()
+loss_func = lambda target, pred: avg_loss(target, pred) \
+    + bounds_loss(target, pred) \
+    + mse_loss(target, pred)
 optimizer = tf.keras.optimizers.Nadam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
 
-# for epoch in tqdm(range(250)):
-for epoch in tqdm(range(100)):
+# %%
+for epoch in tqdm(range(50)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in)[...,0]
         loss = loss_func(outs, data_target)
@@ -128,20 +149,42 @@ for epoch in tqdm(range(100)):
     if epoch % 5 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
-        # print(f'    Grads: {[g.numpy() for g in grads]}')
-        # print(f'    Trainables: {[t.numpy() for t in model.trainable_variables]}')
-    
+
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
 print(f'\nFinal Results:')
 print(f'    Loss: {loss}')
-# print(f'    Grads: {[g.numpy() for g in grads]}')
-# print(f'    Trainables: {[t.numpy() for t in model.trainable_variables]}')
 
 # %%
 outs = model.forward(data_in)[...,0].numpy().flatten()
 print(outs.shape)
 plt.plot(data_target[:,0])
 plt.plot(outs, '--')
+
+# %%
+def diode_pair_func(x):
+    a = x[0, 0]
+    nextR = x[0, 1]
+    Vt = 25.85e-3
+    R_Is = nextR * 1.0e-9
+    R_Is_overVt = R_Is / Vt
+    logR_Is_overVt = np.log(R_Is_overVt)
+    lamb = np.sign(a)
+    b = a + 2 * lamb * (R_Is - Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
+    return np.float32(b)
+
+N = 5000
+test_x = np.linspace(-10, 10, N)
+test_x = np.stack([test_x, np.ones(N) * 1.0e-9]).transpose()
+
+ideal_y = np.zeros(N)
+for n in range(N):
+    ideal_y[n] = diode_pair_func(np.array([test_x[n,:]]))
+
+x_in_tt = np.array([test_x[:,0].astype(np.float32)]).transpose()
+y_test = model.model.forward(x_in_tt).numpy().flatten()
+
+plt.plot(test_x[:,0], ideal_y)
+plt.plot(test_x[:,0], y_test, '--')
 
 # %%
