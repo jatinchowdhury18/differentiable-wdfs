@@ -7,6 +7,8 @@ from tf_wdf import tf
 from tqdm import tqdm
 import pathlib
 
+from model_utils import *
+
 # %%
 BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
 x = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_x.csv", dtype=np.float32)
@@ -60,7 +62,7 @@ class DenseLayer(tf.Module):
         return tf.matmul(input, self.kernel) + self.bias
 
 class RootModel(tf.Module):
-    def __init__(self, n_layers, hidden_dim, activation='relu', batch_size=1):
+    def __init__(self, n_layers, hidden_dim, batch_size=1):
         super(RootModel, self).__init__()
         self.layers = []
 
@@ -87,7 +89,7 @@ class ClipperModel(tf.Module):
         self.R = wdf.Resistor(10.0e3)
         self.P1 = wdf.Parallel(self.Vs, self.R)
 
-        self.model = RootModel(4, 8, batch_size=n_batches)
+        self.model = RootModel(8, 8, batch_size=n_batches)
 
     def forward(self, input):
         sequence_length = input.shape[1]
@@ -145,9 +147,6 @@ mse_loss = tf.keras.losses.MeanSquaredError()
 loss_func = lambda target, pred: avg_loss(target, pred) \
     + bounds_loss(target, pred) \
     + esr_loss(target, pred)
-# loss_func = lambda target, pred: avg_loss(target, pred) \
-#     + bounds_loss(target, pred) \
-#     + esr_with_emph(target, pred)
 optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
 
 # %%
@@ -201,5 +200,39 @@ y_test = model.model.forward(x_in_tt).numpy().flatten()
 
 plt.plot(test_x[:,0], ideal_y)
 plt.plot(test_x[:,0], y_test, '--')
+
+# %%
+
+def save_model_json(model):
+    def get_weights(layer):
+        weights = layer.kernel.numpy()
+        bias = layer.bias.numpy()
+        return [weights, bias]
+
+    model_dict = {}
+    model_dict["in_shape"] = 1
+    layers = []
+    for layer in model.layers:
+        if layer ==  tf.nn.tanh:
+            layers[-1]["activation"] = 'tanh'
+            continue
+        
+        if isinstance(layer, DenseLayer):
+            layer_dict = {
+                "type": 'dense',
+                "shape": layer.bias.shape[-1],
+                "weights": get_weights(layer)
+            }
+        layers.append(layer_dict)
+
+    model_dict["layers"] = layers
+    return model_dict
+
+def save_model(model, filename):
+    model_dict = save_model_json(model)
+    with open(filename, 'w') as outfile:
+        json.dump(model_dict, outfile, cls=NumpyArrayEncoder, indent=4)
+
+save_model(model.model, 'clipper.json')
 
 # %%
