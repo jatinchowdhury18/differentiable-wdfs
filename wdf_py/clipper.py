@@ -87,7 +87,7 @@ class ClipperModel(tf.Module):
         self.R = wdf.Resistor(10.0e3)
         self.P1 = wdf.Parallel(self.Vs, self.R)
 
-        self.model = RootModel(8, 32, batch_size=n_batches)
+        self.model = RootModel(4, 8, batch_size=n_batches)
 
     def forward(self, input):
         sequence_length = input.shape[1]
@@ -103,7 +103,7 @@ class ClipperModel(tf.Module):
             b = self.model.forward(a)
             self.P1.incident(b)
 
-            output = -1 * wdf.voltage(self.R)
+            output = wdf.voltage(self.R)
             output_sequence = output_sequence.write(i, output)
         
         output_sequence = output_sequence.stack()
@@ -141,14 +141,17 @@ def bounds_loss(target_y, pred_y):
     return tf.math.abs(target_min - pred_min) + tf.math.abs(target_max - pred_max)
 
 mse_loss = tf.keras.losses.MeanSquaredError()
-# loss_func = esr_with_emph
+# loss_func = esr_loss
 loss_func = lambda target, pred: avg_loss(target, pred) \
     + bounds_loss(target, pred) \
-    + esr_with_emph(target, pred)
+    + esr_loss(target, pred)
+# loss_func = lambda target, pred: avg_loss(target, pred) \
+#     + bounds_loss(target, pred) \
+#     + esr_with_emph(target, pred)
 optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
 
 # %%
-for epoch in tqdm(range(100)):
+for epoch in tqdm(range(500)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in)[...,0]
         loss = loss_func(outs, data_target)
@@ -156,7 +159,7 @@ for epoch in tqdm(range(100)):
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 5 == 0:
+    if epoch % 50 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
         plt.figure()
