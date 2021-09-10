@@ -70,13 +70,14 @@ class RootModel(tf.Module):
             self.layers.append(DenseLayer(batch_size, in_size, out_size))
 
             if n < n_layers - 1:
-                self.layers.append(tf.nn.relu)
+                self.layers.append(tf.nn.tanh)
 
     def forward(self, input):
-        for l in self.layers:
-            input = l(input)
+        x = self.layers[0](input)
+        for l in self.layers[1:]:
+            x = l(x)
 
-        return input
+        return x - input
 
 # %%
 class ClipperModel(tf.Module):
@@ -86,7 +87,7 @@ class ClipperModel(tf.Module):
         self.R = wdf.Resistor(10.0e3)
         self.P1 = wdf.Parallel(self.Vs, self.R)
 
-        self.model = RootModel(8, 16, batch_size=n_batches)
+        self.model = RootModel(8, 32, batch_size=n_batches)
 
     def forward(self, input):
         sequence_length = input.shape[1]
@@ -102,7 +103,7 @@ class ClipperModel(tf.Module):
             b = self.model.forward(a)
             self.P1.incident(b)
 
-            output = wdf.voltage(self.R)
+            output = -1 * wdf.voltage(self.R)
             output_sequence = output_sequence.write(i, output)
         
         output_sequence = output_sequence.stack()
@@ -110,6 +111,9 @@ class ClipperModel(tf.Module):
 
 # %%
 model = ClipperModel()
+
+def pre_emphasis_filter(x, coeff=0.85):
+  return tf.concat([x[0:1], x[1:] - coeff*x[:-1]], axis=0)
 
 eps = np.finfo(float).eps
 def esr_loss(target_y, predicted_y, emphasis_func=lambda x : x):
@@ -121,6 +125,8 @@ def esr_loss(target_y, predicted_y, emphasis_func=lambda x : x):
     loss_unnorm = mse / (energy + eps)
     # loss_unnorm = mse * energy
     return loss_unnorm / N
+
+esr_with_emph = lambda target, pred: esr_loss(target, pred, pre_emphasis_filter)
 
 def avg_loss(target_y, pred_y):
     target_mean = tf.math.reduce_mean(target_y)
@@ -135,13 +141,14 @@ def bounds_loss(target_y, pred_y):
     return tf.math.abs(target_min - pred_min) + tf.math.abs(target_max - pred_max)
 
 mse_loss = tf.keras.losses.MeanSquaredError()
-loss_func = mse_loss
-# loss_func = lambda target, pred: bounds_loss(target, pred) \
-#     + esr_loss(target, pred)
-optimizer = tf.keras.optimizers.Nadam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
+# loss_func = esr_with_emph
+loss_func = lambda target, pred: avg_loss(target, pred) \
+    + bounds_loss(target, pred) \
+    + esr_with_emph(target, pred)
+optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
 
 # %%
-for epoch in tqdm(range(90)):
+for epoch in tqdm(range(100)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in)[...,0]
         loss = loss_func(outs, data_target)
