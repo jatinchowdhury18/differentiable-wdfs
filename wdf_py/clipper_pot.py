@@ -101,7 +101,6 @@ class ClipperModel(tf.Module):
         self.model = RootModel(2, 8, 8, batch_size=n_batches)
 
     def forward(self, input):
-        print(input.shape)
         sequence_length = input.shape[1]
         batch_size = input.shape[0]
         input = tf.cast(tf.expand_dims(input, axis=-1), dtype=tf.float32)
@@ -113,7 +112,7 @@ class ClipperModel(tf.Module):
             self.Vs.set_resistance(input[:, i, 1:2])
             self.P1.calc_impedance()
 
-            model_in = tf.concat((self.P1.reflected(), self.P1.R), axis=1)
+            model_in = tf.concat((self.P1.reflected(), self.P1.R / 1000), axis=1)
             self.model.incident(tf.transpose(model_in, perm=[0, 2, 1]))
             self.P1.incident(self.model.reflected())
 
@@ -161,7 +160,7 @@ loss_func = lambda target, pred: avg_loss(target, pred) \
 optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
 
 # %%
-for epoch in tqdm(range(500)):
+for epoch in tqdm(range(100)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in_batched)[...,0]
         loss = loss_func(outs, data_target)
@@ -169,14 +168,13 @@ for epoch in tqdm(range(500)):
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 50 == 0:
+    if epoch % 10 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
         plt.figure()
         plt.plot(data_target[:,0])
         plt.plot(outs.numpy().flatten(), '--')
         plt.show()
-
 
 print(f'\nFinal Results:')
 print(f'    Loss: {loss}')

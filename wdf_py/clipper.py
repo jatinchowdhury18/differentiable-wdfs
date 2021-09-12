@@ -147,10 +147,10 @@ mse_loss = tf.keras.losses.MeanSquaredError()
 loss_func = lambda target, pred: avg_loss(target, pred) \
     + bounds_loss(target, pred) \
     + esr_loss(target, pred)
-optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
+optimizer = tf.keras.optimizers.Nadam(learning_rate=0.05, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
 
 # %%
-for epoch in tqdm(range(100)):
+for epoch in tqdm(range(500)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in_batched)[...,0]
         loss = loss_func(outs, data_target)
@@ -158,7 +158,7 @@ for epoch in tqdm(range(100)):
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 5 == 0:
+    if epoch % 25 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
         plt.figure()
