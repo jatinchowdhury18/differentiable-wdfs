@@ -33,6 +33,9 @@ class ResistiveVoltageSource(tf.Module):
 
     def set_voltage(self, voltage):
         self.Vs = voltage
+    
+    def set_resistance(self, resistance):
+        self.R = resistance
 
     def incident(self, x):
         self.a = x

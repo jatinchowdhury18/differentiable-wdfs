@@ -11,32 +11,32 @@ from model_utils import *
 
 # %%
 BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
-x = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_x.csv", dtype=np.float32)
-y_ref = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_y.csv", dtype=np.float32)
+x = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_x.csv", dtype=np.float32)
+R_data = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_r.csv", dtype=np.float32)
+y_ref = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_y.csv", dtype=np.float32)
 
 print(x.shape)
 print(y_ref.shape)
 
 FS = 48000
-N = 1200
-x = x[:N]
-y_ref = y_ref[:N]
+N = len(x)
+# x = x[:N]
+# y_ref = y_ref[:N]
 
 # %%
 n_batches = 1
-FS = 48000
-freq = 100
 
-data_in = np.array([x])
-data_in_batched = np.array(np.array_split(data_in[0], n_batches))
+data_in = np.stack([x, R_data], axis=0).transpose()
+data_in_batched = np.array(np.array_split(data_in, n_batches))
 data_target = np.transpose(np.array([y_ref]))
 
 print(data_in.shape)
 print(data_in_batched.shape)
-print(data_target.shape)
+# print(data_target.shape)
 
-plt.plot(data_in[0])
-plt.plot(data_in_batched[0])
+# plt.plot(data_in[:, 0])
+plt.plot(data_in_batched[0, :, 1] / 200000)
+plt.plot(data_in_batched[0, :, 0] / 8)
 plt.plot(data_target[:,0])
 
 # %%
@@ -62,24 +62,33 @@ class DenseLayer(tf.Module):
         return tf.matmul(input, self.kernel) + self.bias
 
 class RootModel(tf.Module):
-    def __init__(self, n_layers, hidden_dim, batch_size=1):
+    def __init__(self, in_size, n_layers, hidden_dim, batch_size=1):
         super(RootModel, self).__init__()
+
+        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
+        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+
         self.layers = []
 
         for n in range(n_layers):
-            in_size = 1 if n == 0 else hidden_dim
+            in_size = in_size if n == 0 else hidden_dim
             out_size = 1 if n == n_layers - 1 else hidden_dim
             self.layers.append(DenseLayer(batch_size, in_size, out_size))
 
             if n < n_layers - 1:
                 self.layers.append(tf.nn.tanh)
 
-    def forward(self, input):
-        x = self.layers[0](input)
+    def incident(self, x):
+        self.a = x[:, :, 0]
+        self.model_in = x
+
+    def reflected(self):
+        x = self.layers[0](self.model_in)
         for l in self.layers[1:]:
             x = l(x)
 
-        return x - input
+        self.b = x - self.a
+        return self.b
 
 # %%
 class ClipperModel(tf.Module):
@@ -89,23 +98,26 @@ class ClipperModel(tf.Module):
         self.R = wdf.Resistor(10.0e3)
         self.P1 = wdf.Parallel(self.Vs, self.R)
 
-        self.model = RootModel(8, 8, batch_size=n_batches)
+        self.model = RootModel(2, 8, 8, batch_size=n_batches)
 
     def forward(self, input):
+        print(input.shape)
         sequence_length = input.shape[1]
         batch_size = input.shape[0]
         input = tf.cast(tf.expand_dims(input, axis=-1), dtype=tf.float32)
         output_sequence = tf.TensorArray(dtype=tf.float32, size=sequence_length, clear_after_read=False)
 
-        self.P1.calc_impedance()
         for i in range(sequence_length):
-            self.Vs.set_voltage(input[:, i])
+            self.Vs.set_voltage(input[:, i, 0:1])
 
-            a = self.P1.reflected()
-            b = self.model.forward(a)
-            self.P1.incident(b)
+            self.Vs.set_resistance(input[:, i, 1:2])
+            self.P1.calc_impedance()
 
-            output = wdf.voltage(self.R)
+            model_in = tf.concat((self.P1.reflected(), self.P1.R), axis=1)
+            self.model.incident(tf.transpose(model_in, perm=[0, 2, 1]))
+            self.P1.incident(self.model.reflected())
+
+            output = wdf.voltage(self.model)
             output_sequence = output_sequence.write(i, output)
         
         output_sequence = output_sequence.stack()
@@ -125,7 +137,6 @@ def esr_loss(target_y, predicted_y, emphasis_func=lambda x : x):
     energy = tf.math.reduce_sum(tf.math.square(target_yp))
     
     loss_unnorm = mse / (energy + eps)
-    # loss_unnorm = mse * energy
     return loss_unnorm / N
 
 esr_with_emph = lambda target, pred: esr_loss(target, pred, pre_emphasis_filter)
@@ -150,7 +161,7 @@ loss_func = lambda target, pred: avg_loss(target, pred) \
 optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
 
 # %%
-for epoch in tqdm(range(100)):
+for epoch in tqdm(range(500)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in_batched)[...,0]
         loss = loss_func(outs, data_target)
@@ -158,13 +169,14 @@ for epoch in tqdm(range(100)):
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 5 == 0:
+    if epoch % 50 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
         plt.figure()
         plt.plot(data_target[:,0])
         plt.plot(outs.numpy().flatten(), '--')
         plt.show()
+
 
 print(f'\nFinal Results:')
 print(f'    Loss: {loss}')
