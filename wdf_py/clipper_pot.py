@@ -19,9 +19,10 @@ print(x.shape)
 print(y_ref.shape)
 
 FS = 48000
-N = len(x)
-# x = x[:N]
-# y_ref = y_ref[:N]
+N = len(x) // 2
+x = x[:N]
+R_data = R_data[:N]
+y_ref = y_ref[:N]
 
 # %%
 n_batches = 1
@@ -153,14 +154,14 @@ def bounds_loss(target_y, pred_y):
     return tf.math.abs(target_min - pred_min) + tf.math.abs(target_max - pred_max)
 
 mse_loss = tf.keras.losses.MeanSquaredError()
-# loss_func = esr_loss
-loss_func = lambda target, pred: avg_loss(target, pred) \
-    + bounds_loss(target, pred) \
-    + esr_loss(target, pred)
+# loss_func = mse_loss
+loss_func = lambda target, pred: esr_loss(target, pred) \
+    + 5 * avg_loss(target, pred) \
+    + 5 * bounds_loss(target, pred)
 optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
 
 # %%
-for epoch in tqdm(range(100)):
+for epoch in tqdm(range(200)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in_batched)[...,0]
         loss = loss_func(outs, data_target)

@@ -4,6 +4,9 @@ build/
 # python artifacts
 __pycache__
 
+# Tensorflow artifacts
+wdf_py/*_model
+
 # other extras
 .vscode
 *.png
