@@ -6,6 +6,27 @@ implementing differentiable wave digital filters
 neural networks, and allow for the automatic
 optimisation of WDF parameters.
 
+## Circuits to train
+- diode clipper with anti-parallel 1n4148 diodes
+- diode clipper with anti-parallel 1n4007 (power) diodes
+- diode clipper with 2x2 anti-parallel 1n4148 diodes
+- tube screamer
+  - buy one
+  - Keith's data
+  - build one?
+
+Wish list:
+- diode clipper with germanium diodes
+
+TODO:
+- use better diode equation for pre-training
+- record circuit data
+- train full circuit models
+- build a plugin for trained models
+- find Kurt's tube screamer paper
+- look at Stefano D'Angelo's op-amp paper
+- try to reduce model size (grid-search, NEAT)
+
 ## Settings up the Python environment
 
 The code in this repo has been tested using Python

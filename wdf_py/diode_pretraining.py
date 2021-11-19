@@ -3,17 +3,29 @@ import numpy as np
 from scipy.special import wrightomega
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from model_utils import save_model
+from collections import namedtuple
+from lib.model_utils import save_model
 
 # %%
-def diode_pair_func(x, R = 1.0e-9, Is = 1.0e-9):
+n_layers = 4
+layer_size = 8
+
+Vt = 25.85e-3
+DiodeConfig = namedtuple('DiodeConfig', ['name', 'Is', 'Vt'])
+
+default_diode = DiodeConfig('DefaultDiode', 1.0e-9, Vt)
+diode_1n4148 = DiodeConfig('1N4148', 25.0e-9, Vt)
+
+diode_to_train = diode_1n4148
+
+# %%
+def diode_pair_func(x, R, diode):
     a = x
-    Vt = 25.85e-3
-    R_Is = Is * R
-    R_Is_overVt = R_Is / Vt
+    R_Is = diode.Is * R
+    R_Is_overVt = R_Is / diode.Vt
     logR_Is_overVt = np.log(R_Is_overVt)
     lamb = np.sign(a)
-    b = a + 2 * lamb * (R_Is - Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
+    b = a + 2 * lamb * (R_Is - diode.Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
     return np.float32(b)
 
 # %%
@@ -36,7 +48,7 @@ plt.plot(np.log(test_x[:,1]) / 2)
 ideal_y = np.zeros_like(test_x[:,0])
 for n in range(len(ideal_y)):
     # multiply by -1 to make the data line up better
-    ideal_y[n] = -1 * diode_pair_func(*test_x[n])
+    ideal_y[n] = -1 * diode_pair_func(*test_x[n], diode_to_train)
 
 # use log of impedance instead of impedance!
 test_x[:,1] = np.log(test_x[:,1])
@@ -48,8 +60,6 @@ plt.plot(test_x[:,0])
 plt.plot(ideal_y)
 
 # %%
-n_layers = 4
-layer_size = 8
 layer_xs = []
 inputs = tf.keras.Input(shape=(2,))
 for n in range(n_layers):
@@ -94,16 +104,13 @@ y_test = diode_model(test_x).numpy().flatten()
 plt.plot(ideal_y)
 plt.plot(y_test, '--')
 
-# plt.xlim(1400, 1600)
+plt.xlim(0, 20000)
 # plt.ylim(-0.25, 0.25)
+plt.grid()
+
+plt.savefig(f'plots/{diode_to_train.name}_pretrained.png')
 
 # %%
-diode_model.save('diodeR_test_model')
+save_model(diode_model, f'models/{diode_to_train.name}_pretrained_model.json')
 
 # %%
-save_model(diode_model, 'diodeR_test_model.json')
-
-# %%
-# val_x = np.array([[0.45355588, 5.2008276]])
-# print(diode_model(val_x))
-# print(-1 * diode_pair_func(val_x[0,0], np.exp(val_x[0,1])))
