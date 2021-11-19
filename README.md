@@ -19,7 +19,6 @@ Wish list:
 - diode clipper with germanium diodes
 
 TODO:
-- use better diode equation for pre-training
 - record circuit data
 - train full circuit models
 - build a plugin for trained models

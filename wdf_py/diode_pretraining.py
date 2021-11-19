@@ -19,13 +19,31 @@ diode_1n4148 = DiodeConfig('1N4148', 25.0e-9, Vt)
 diode_to_train = diode_1n4148
 
 # %%
-def diode_pair_func(x, R, diode):
+# WDF diode pair equations:
+# See Werner et al., "An Improved and Generalized Diode Clipper Model for Wave Digital Filters"
+# https://www.researchgate.net/publication/299514713_An_Improved_and_Generalized_Diode_Clipper_Model_for_Wave_Digital_Filters
+
+# see reference eqn (18)
+def diode_pair_func_good(x, R, diode):
     a = x
     R_Is = diode.Is * R
     R_Is_overVt = R_Is / diode.Vt
     logR_Is_overVt = np.log(R_Is_overVt)
     lamb = np.sign(a)
     b = a + 2 * lamb * (R_Is - diode.Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
+    return np.float32(b)
+
+# see reference eqn (39)
+def diode_pair_func_best(x, R, diode):
+    a = x
+    R_Is = diode.Is * R
+    R_Is_overVt = R_Is / diode.Vt
+    logR_Is_overVt = np.log(R_Is_overVt)
+    
+    lamb = np.sign(a)
+    lamb_a_over_vt = lamb * a / diode.Vt
+
+    b = a - 2 * diode.Vt * lamb * (wrightomega(logR_Is_overVt + lamb_a_over_vt) - wrightomega(logR_Is_overVt - lamb_a_over_vt))
     return np.float32(b)
 
 # %%
@@ -46,17 +64,16 @@ plt.plot(np.log(test_x[:,1]) / 2)
 
 # %%
 ideal_y = np.zeros_like(test_x[:,0])
+ideal_y2 = np.zeros_like(test_x[:,0])
 for n in range(len(ideal_y)):
     # multiply by -1 to make the data line up better
-    ideal_y[n] = -1 * diode_pair_func(*test_x[n], diode_to_train)
+    ideal_y[n] = -1 * diode_pair_func_best(*test_x[n], diode_to_train)
 
 # use log of impedance instead of impedance!
 test_x[:,1] = np.log(test_x[:,1])
 
 # %%
-# plt.plot(test_x[:,0] + 5 * np.log(test_x[:,1]), ideal_y)
 plt.plot(test_x[:,0])
-# plt.plot(test_x[:,1])
 plt.plot(ideal_y)
 
 # %%
@@ -105,7 +122,6 @@ plt.plot(ideal_y)
 plt.plot(y_test, '--')
 
 plt.xlim(0, 20000)
-# plt.ylim(-0.25, 0.25)
 plt.grid()
 
 plt.savefig(f'plots/{diode_to_train.name}_pretrained.png')

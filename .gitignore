@@ -10,3 +10,4 @@ wdf_py/*_model
 # other extras
 .vscode
 *.png
+!wdf_py/plots/*.png
