@@ -200,7 +200,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1.0e-5)
 for epoch in tqdm(range(101)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in_batched)[...,0]
-        loss = avg_loss(outs, data_target)
+        loss = loss_func(outs, data_target)
     
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
