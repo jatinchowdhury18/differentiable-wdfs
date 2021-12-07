@@ -1,4 +1,7 @@
 # %%
+import sys
+sys.path.insert(0, './lib')
+sys.path.insert(0, './models')
 import numpy as np
 from scipy.special import wrightomega
 import matplotlib.pyplot as plt
@@ -147,7 +150,7 @@ class ClipperModel(tf.Module):
         return output_sequence
 
 # %%
-with open("diodeR_test_model.json", "r") as read_file:
+with open("./models/diodeR_test_model.json", "r") as read_file:
     model_json = json.load(read_file)
 
 model = ClipperModel(model_json)
