@@ -1,4 +1,7 @@
 # %%
+import sys
+sys.path.insert(0, './lib')
+sys.path.insert(0, './models')
 import numpy as np
 from scipy.special import wrightomega
 import matplotlib.pyplot as plt
@@ -147,7 +150,7 @@ class ClipperModel(tf.Module):
         return output_sequence
 
 # %%
-with open("diodeR_test_model.json", "r") as read_file:
+with open("./models/diodeR_test_model.json", "r") as read_file:
     model_json = json.load(read_file)
 
 model = ClipperModel(model_json)
@@ -197,7 +200,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1.0e-5)
 for epoch in tqdm(range(101)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in_batched)[...,0]
-        loss = loss_func(outs, data_target)
+        loss = avg_loss(outs, data_target)
     
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
