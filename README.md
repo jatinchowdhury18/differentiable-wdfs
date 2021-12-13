@@ -7,9 +7,9 @@ neural networks, and allow for the automatic
 optimisation of WDF parameters.
 
 ## Circuits to train
-- diode clipper with anti-parallel 1n4148 diodes
-- diode clipper with anti-parallel 1n4007 (power) diodes
-- diode clipper with 2x2 anti-parallel 1n4148 diodes
+- diode clipper with 1N4148 and pot. from ~10k - ~100k (3-4 steps)
+- diode clipper with [X DIODE] and pot. from ~10k - ~100k (3-4 steps)
+- diode clipper with 2x2 1N4148 and pot. from ~10k - ~100k (3-4 steps)
 - tube screamer
   - buy one
   - Keith's data

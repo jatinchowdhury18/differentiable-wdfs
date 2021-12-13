@@ -2,9 +2,11 @@
 import sys
 sys.path.insert(0, './lib')
 sys.path.insert(0, './models')
+
 import numpy as np
 from scipy.special import wrightomega
 import matplotlib.pyplot as plt
+import pandas as pd
 
 import tf_wdf as wdf
 from tf_wdf import tf
@@ -17,18 +19,32 @@ from model_utils import *
 
 # %%
 BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
-x = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_x.csv", dtype=np.float32)
-R_data = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_r.csv", dtype=np.float32)
-y_ref = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_y.csv", dtype=np.float32)
+raw_data = pd.read_csv(f"{BASE_DIR}/diode_dataset/trial_data/47k_2.2nF_1N4148.csv", header=9)
+raw_data = raw_data.to_numpy()
 
+# %%
+# input = [0], output [1]
+start = int(500e3)
+N = int(20e3)
+x = raw_data[start:start+N, 0].astype(np.float32)
+R_data = np.ones_like(x) * 47e3
+y_ref = raw_data[start:start+N, 1].astype(np.float32)
+
+# %%
+# BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
+# x = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_x.csv", dtype=np.float32)
+# R_data = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_r.csv", dtype=np.float32)
+# y_ref = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_y.csv", dtype=np.float32)
+
+# %%
 print(x.shape)
 print(y_ref.shape)
 
-FS = 48000
-N = len(x) // 2
-x = x[:N]
-R_data = R_data[:N]
-y_ref = y_ref[:N]
+FS = 50000
+N = len(x)
+# x = x[:N]
+# R_data = R_data[:N]
+# y_ref = y_ref[:N]
 
 # %%
 n_batches = 1
@@ -43,7 +59,7 @@ print(data_in_batched.shape)
 
 # plt.plot(data_in[:, 0])
 plt.plot(np.log(data_in_batched[0, :, 1]) - 8)
-plt.plot(data_in_batched[0, :, 0] / 8)
+plt.plot(data_in_batched[0, :, 0])
 plt.plot(data_target[:,0])
 
 # %%
@@ -150,14 +166,12 @@ class ClipperModel(tf.Module):
         return output_sequence
 
 # %%
-with open("./models/diodeR_test_model.json", "r") as read_file:
+with open("./models/1N4148_pretrained_model.json", "r") as read_file:
     model_json = json.load(read_file)
 
 model = ClipperModel(model_json)
 
 # %%
-# model = ClipperModel()
-
 def pre_emphasis_filter(x, coeff=0.85):
   return tf.concat([x[0:1], x[1:] - coeff*x[:-1]], axis=0)
 
@@ -197,7 +211,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1.0e-5)
 
 # %%
 # for epoch in tqdm(range(200)):
-for epoch in tqdm(range(101)):
+for epoch in tqdm(range(11)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in_batched)[...,0]
         loss = loss_func(outs, data_target)
