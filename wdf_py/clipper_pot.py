@@ -25,7 +25,7 @@ raw_data = raw_data.to_numpy()
 # %%
 # input = [0], output [1]
 start = int(500e3)
-N = int(20e3)
+N = int(10e3)
 x = raw_data[start:start+N, 0].astype(np.float32)
 R_data = np.ones_like(x) * 47e3
 y_ref = raw_data[start:start+N, 1].astype(np.float32)
@@ -137,8 +137,8 @@ class RootModel(tf.Module):
 class ClipperModel(tf.Module):
     def __init__(self, json):
         super(ClipperModel, self).__init__()
-        self.Vs = wdf.ResistiveVoltageSource(4700.0)
-        self.C = wdf.Capacitor(47.0e-9, FS)
+        self.Vs = wdf.ResistiveVoltageSource(47000.0)
+        self.C = wdf.Capacitor(2.2e-9, FS)
         self.P1 = wdf.Parallel(self.Vs, self.C)
 
         self.model = RootModel(json, batch_size=n_batches)
@@ -200,14 +200,12 @@ def bounds_loss(target_y, pred_y):
     return tf.math.abs(target_min - pred_min) + tf.math.abs(target_max - pred_max)
 
 mse_loss = tf.keras.losses.MeanSquaredError()
-# loss_func = lambda target, pred: esr_loss(target, pred) \
-#     + 5 * avg_loss(target, pred) \
-#     + 5 * bounds_loss(target, pred)
-# loss_func = lambda target, pred: tf.sqrt(esr_loss(target, pred)) + mse_loss(target, pred)
-loss_func = mse_loss
+# loss_func = mse_loss
+loss_func = lambda target, pred: 0.1 * esr_loss(target, pred) + 10 * mse_loss(target, pred)
 
 # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
-optimizer = tf.keras.optimizers.Adam(learning_rate=1.0e-5)
+# optimizer = tf.keras.optimizers.Adam(learning_rate=1.0e-2)
+optimizer = tf.keras.optimizers.Adagrad(learning_rate=1e-2, initial_accumulator_value=0.1, epsilon=1e-07,name='Adagrad')
 
 # %%
 # for epoch in tqdm(range(200)):
@@ -219,7 +217,7 @@ for epoch in tqdm(range(11)):
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 10 == 0:
+    if epoch % 2 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
         plt.figure()
