@@ -10,11 +10,10 @@ from lib.model_utils import save_model
 n_layers = 4
 layer_size = 8
 
-Vt = 25.85e-3
-DiodeConfig = namedtuple('DiodeConfig', ['name', 'Is', 'Vt'])
+DiodeConfig = namedtuple('DiodeConfig', ['name', 'Is', 'nabla', 'Vt'], defaults=['', 1.0e-9, 1.0, 25.85e-3])
 
-default_diode = DiodeConfig('DefaultDiode', 1.0e-9, Vt)
-diode_1n4148 = DiodeConfig('1N4148', 25.0e-9, Vt)
+default_diode = DiodeConfig('DefaultDiode')
+diode_1n4148 = DiodeConfig('1N4148', Is=4.352e-9, nabla=1.906) # borrowed from: https://github.com/neiser/spice-padiwa-amps/blob/master/1N4148.lib
 
 diode_to_train = diode_1n4148
 
@@ -27,23 +26,25 @@ diode_to_train = diode_1n4148
 def diode_pair_func_good(x, R, diode):
     a = x
     R_Is = diode.Is * R
-    R_Is_overVt = R_Is / diode.Vt
+    Vt = diode.Vt * diode.nabla
+    R_Is_overVt = R_Is / Vt
     logR_Is_overVt = np.log(R_Is_overVt)
     lamb = np.sign(a)
-    b = a + 2 * lamb * (R_Is - diode.Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
+    b = a + 2 * lamb * (R_Is - Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
     return np.float32(b)
 
 # see reference eqn (39)
 def diode_pair_func_best(x, R, diode):
     a = x
     R_Is = diode.Is * R
-    R_Is_overVt = R_Is / diode.Vt
+    Vt = diode.Vt * diode.nabla
+    R_Is_overVt = R_Is / Vt
     logR_Is_overVt = np.log(R_Is_overVt)
     
     lamb = np.sign(a)
-    lamb_a_over_vt = lamb * a / diode.Vt
+    lamb_a_over_vt = lamb * a / Vt
 
-    b = a - 2 * diode.Vt * lamb * (wrightomega(logR_Is_overVt + lamb_a_over_vt) - wrightomega(logR_Is_overVt - lamb_a_over_vt))
+    b = a - 2 * Vt * lamb * (wrightomega(logR_Is_overVt + lamb_a_over_vt) - wrightomega(logR_Is_overVt - lamb_a_over_vt))
     return np.float32(b)
 
 # %%

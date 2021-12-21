@@ -25,7 +25,7 @@ raw_data = raw_data.to_numpy()
 # %%
 # input = [0], output [1]
 start = int(500e3)
-N = int(10e3)
+N = int(20e3)
 x = raw_data[start:start+N, 0].astype(np.float32)
 R_data = np.ones_like(x) * 47e3
 y_ref = raw_data[start:start+N, 1].astype(np.float32)
@@ -122,15 +122,13 @@ class RootModel(tf.Module):
     def incident(self, x):
         self.a = x[:, :, 0]
         self.model_in = x
-        # print(self.model_in)
 
     def reflected(self):
         x = self.model_in
         for l in self.layers:
             x = l(x)
 
-        self.b = -1 * x # - self.a
-        # print(self.b)
+        self.b = -1 * x
         return self.b
 
 # %%
@@ -159,7 +157,7 @@ class ClipperModel(tf.Module):
             self.model.incident(tf.transpose(model_in, perm=[0, 2, 1]))
             self.P1.incident(self.model.reflected())
 
-            output = wdf.voltage(self.model)
+            output = wdf.voltage(self.C)
             output_sequence = output_sequence.write(i, output)
         
         output_sequence = output_sequence.stack()
@@ -200,16 +198,15 @@ def bounds_loss(target_y, pred_y):
     return tf.math.abs(target_min - pred_min) + tf.math.abs(target_max - pred_max)
 
 mse_loss = tf.keras.losses.MeanSquaredError()
-# loss_func = mse_loss
-loss_func = lambda target, pred: 0.1 * esr_loss(target, pred) + 10 * mse_loss(target, pred)
+# loss_func = lambda target, pred: 0.1 * esr_loss(target, pred) + 10 * mse_loss(target, pred)
+loss_func = mse_loss
 
 # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
-# optimizer = tf.keras.optimizers.Adam(learning_rate=1.0e-2)
-optimizer = tf.keras.optimizers.Adagrad(learning_rate=1e-2, initial_accumulator_value=0.1, epsilon=1e-07,name='Adagrad')
+optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+# optimizer = tf.keras.optimizers.Adagrad(learning_rate=1e-2, initial_accumulator_value=0.1, epsilon=1e-07,name='Adagrad')
 
 # %%
-# for epoch in tqdm(range(200)):
-for epoch in tqdm(range(11)):
+for epoch in tqdm(range(51)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in_batched)[...,0]
         loss = loss_func(outs, data_target)
@@ -217,12 +214,13 @@ for epoch in tqdm(range(11)):
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 2 == 0:
+    if epoch % 5 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
         plt.figure()
         plt.plot(data_target[:,0])
         plt.plot(outs.numpy().flatten(), '--')
+        plt.savefig(f'./plots/1N4148_clipper_pot_epoch_{epoch}.png')
         plt.show()
 
 print(f'\nFinal Results:')
@@ -236,65 +234,39 @@ print(outs.shape)
 plt.plot(data_target[:,0])
 plt.plot(outs, '--')
 # plt.ylim(-0.2, 0.2)
-# plt.xlim(1150, 1250)
+plt.xlim(11150, 11900)
 
 # %%
-# def diode_pair_func(x):
-#     a = x[0, 0]
-#     nextR = x[0, 1]
-#     Vt = 25.85e-3
-#     R_Is = nextR * 1.0e-9
-#     R_Is_overVt = R_Is / Vt
-#     logR_Is_overVt = np.log(R_Is_overVt)
-#     lamb = np.sign(a)
-#     b = a + 2 * lamb * (R_Is - Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
-#     return np.float32(b)
+def save_model_json(model):
+    def get_weights(layer):
+        weights = layer.kernel.numpy()
+        bias = layer.bias.numpy()
+        return [weights, bias]
 
-# N = 5000
-# test_x = np.linspace(-10, 10, N)
-# test_x = np.stack([test_x, np.ones(N) * 1.0e-9]).transpose()
-
-# ideal_y = np.zeros(N)
-# for n in range(N):
-#     ideal_y[n] = diode_pair_func(np.array([test_x[n,:]]))
-
-# x_in_tt = np.array([test_x[:,0].astype(np.float32)]).transpose()
-# y_test = model.model.forward(x_in_tt).numpy().flatten()
-
-# plt.plot(test_x[:,0], ideal_y)
-# plt.plot(test_x[:,0], y_test, '--')
-
-# %%
-# def save_model_json(model):
-#     def get_weights(layer):
-#         weights = layer.kernel.numpy()
-#         bias = layer.bias.numpy()
-#         return [weights, bias]
-
-#     model_dict = {}
-#     model_dict["in_shape"] = 2
-#     layers = []
-#     for layer in model.layers:
-#         if layer == tf.nn.tanh:
-#             layers[-1]["activation"] = 'tanh'
-#             continue
+    model_dict = {}
+    model_dict["in_shape"] = 2
+    layers = []
+    for layer in model.layers:
+        if layer == tf.nn.tanh:
+            layers[-1]["activation"] = 'tanh'
+            continue
         
-#         if isinstance(layer, DenseLayer):
-#             layer_dict = {
-#                 "type": 'dense',
-#                 "shape": layer.bias.shape[-1],
-#                 "weights": get_weights(layer)
-#             }
-#         layers.append(layer_dict)
+        if isinstance(layer, DenseLayer):
+            layer_dict = {
+                "type": 'dense',
+                "shape": layer.bias.shape[-1],
+                "weights": get_weights(layer)
+            }
+        layers.append(layer_dict)
 
-#     model_dict["layers"] = layers
-#     return model_dict
+    model_dict["layers"] = layers
+    return model_dict
 
-# def save_model(model, filename):
-#     model_dict = save_model_json(model)
-#     with open(filename, 'w') as outfile:
-#         json.dump(model_dict, outfile, cls=NumpyArrayEncoder, indent=4)
+def save_model(model, filename):
+    model_dict = save_model_json(model)
+    with open(filename, 'w') as outfile:
+        json.dump(model_dict, outfile, cls=NumpyArrayEncoder, indent=4)
 
-# save_model(model.model, 'clipper_pot.json')
+save_model(model.model, './models/1N4148_clipper_pot.json')
 
 # %%
