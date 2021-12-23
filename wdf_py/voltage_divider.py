@@ -1,7 +1,7 @@
 # %%
 import numpy as np
-import tf_wdf as wdf
-from tf_wdf import tf
+import lib.tf_wdf as wdf
+from lib.tf_wdf import tf
 import tqdm as tqdm
 import matplotlib.pyplot as plt
 
@@ -36,11 +36,9 @@ class Model(tf.Module):
         output_sequence = output_sequence.stack()
         return output_sequence
 
-model = Model()
-
 # %%
 batch_size = 128
-n_batches = 1
+n_batches = 4
 FS = 48000
 freq = 100
 
@@ -57,8 +55,13 @@ plt.plot(data_in_batched[0])
 plt.plot(data_target[:,0])
 
 # %%
+model = Model()
 loss_func = tf.keras.losses.MeanSquaredError()
 optimizer = tf.keras.optimizers.Adam(learning_rate=25.0)
+
+R1s = []
+R2s = []
+losses = []
 
 # for epoch in tqdm.tqdm(range(250)):
 for epoch in tqdm.tqdm(range(100)):
@@ -75,6 +78,10 @@ for epoch in tqdm.tqdm(range(100)):
     
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
+    R1s.append(model.trainable_variables[0].numpy())
+    R2s.append(model.trainable_variables[1].numpy())
+    losses.append(loss)
+
 print(f'\nFinal Results:')
 print(f'    Loss: {loss}')
 print(f'    Grads: {[g.numpy() for g in grads]}')
@@ -83,5 +90,24 @@ print(f'    Trainables: {[t.numpy() for t in model.trainable_variables]}')
 outs = model.forward(data_in)[...,0]
 plt.plot(data_target[:,0])
 plt.plot(outs, '--')
+
+# %%
+fig, ax1 = plt.subplots()
+
+ax1.set_xlabel('Epoch')
+ax1.set_ylabel('Resistance [Ohms]')
+ax1.plot(R1s, label='R1')
+ax1.plot(R2s, label='R2')
+ax1.legend(loc='upper center')
+
+ax2 = ax1.twinx()
+ax2.set_ylabel('Loss')
+ax2.plot(losses, color='red', label='loss')
+ax2.legend()
+
+plt.title('Diff. Voltage Divider Training')
+
+fig.tight_layout()  # otherwise the right y-label is slightly clipped
+plt.savefig('plots/voltage_divider.png')
 
 # %%
