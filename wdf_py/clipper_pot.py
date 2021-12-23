@@ -26,7 +26,7 @@ raw_data = raw_data.to_numpy()
 # input = [0], output [1]
 FS = 50000
 start = int(500e3)
-N = int(20e3)
+N = int(100e3)
 x = raw_data[start:start+N, 0].astype(np.float32)
 R_data = np.ones_like(x) * 47e3
 y_ref = raw_data[start:start+N, 1].astype(np.float32)
@@ -208,7 +208,7 @@ for epoch in tqdm(range(501)):
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 5 == 0:
+    if epoch % 20 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
         plt.figure()
