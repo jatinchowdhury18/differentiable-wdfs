@@ -96,14 +96,15 @@ fig, ax1 = plt.subplots()
 
 ax1.set_xlabel('Epoch')
 ax1.set_ylabel('Resistance [Ohms]')
-ax1.plot(R1s, label='R1')
-ax1.plot(R2s, label='R2')
+R1s_plot, = ax1.plot(R1s, label='R1')
+R2s_plot, = ax1.plot(R2s, label='R2')
 ax1.legend(loc='upper center')
 
 ax2 = ax1.twinx()
-ax2.set_ylabel('Loss')
-ax2.plot(losses, color='red', label='loss')
-ax2.legend()
+ax2.set_ylabel('Error')
+losses_plot, = ax2.plot(losses, color='red', label='Error')
+
+ax1.legend(handles=[R1s_plot, R2s_plot, losses_plot])
 
 plt.title('Diff. Voltage Divider Training')
 

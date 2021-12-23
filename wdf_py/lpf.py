@@ -1,7 +1,7 @@
 # %%
 import numpy as np
-import tf_wdf as wdf
-from tf_wdf import tf
+import lib.tf_wdf as wdf
+from lib.tf_wdf import tf
 import tqdm as tqdm
 import matplotlib.pyplot as plt
 import audio_dspy as adsp
@@ -40,8 +40,6 @@ class Model(tf.Module):
         output_sequence = output_sequence.stack()
         return output_sequence
 
-model = Model()
-
 # %%
 batch_size = 256
 n_batches = 5
@@ -63,9 +61,14 @@ plt.plot(data_in_batched[0])
 plt.plot(data_target[:,0])
 
 # %%
+model = Model()
 loss_func = tf.keras.losses.MeanSquaredError()
 R_optimizer = tf.keras.optimizers.Adam(learning_rate=25.0)
-C_optimizer = tf.keras.optimizers.Adam(learning_rate=5.0e-11)
+C_optimizer = tf.keras.optimizers.Adam(learning_rate=10.0e-9)
+
+Rs = []
+Cs = []
+losses = []
 
 # for epoch in tqdm.tqdm(range(250)):
 for epoch in tqdm.tqdm(range(100)):
@@ -83,6 +86,10 @@ for epoch in tqdm.tqdm(range(100)):
     R_optimizer.apply_gradients([(grads[1], model.R1.R)])
     C_optimizer.apply_gradients([(grads[0], model.C1.C)])
 
+    Rs.append(model.R1.R.numpy())
+    Cs.append(model.C1.C.numpy())
+    losses.append(loss)
+
 print(f'\nFinal Results:')
 print(f'    Loss: {loss}')
 print(f'    Grads: {[g.numpy() for g in grads]}')
@@ -94,5 +101,33 @@ print(final_freq)
 outs = model.forward(data_in)[...,0]
 plt.plot(data_target[:,0])
 plt.plot(outs, '--')
+
+# %%
+fig, ax = plt.subplots()
+fig.subplots_adjust(right=0.75)
+
+twin1 = ax.twinx()
+twin2 = ax.twinx()
+
+twin2.spines.right.set_position(("axes", 1.2))
+
+Rs_plot, = ax.plot(Rs, "b-", label="R")
+Cs_plot, = twin1.plot(Cs, "r-", label="C")
+losses_plot, = twin2.plot(losses, "g-", label="Error")
+
+ax.set_xlabel("Epoch")
+ax.set_ylabel("Resistance [Ohms]")
+twin1.set_ylabel("Capacitor [Farads]")
+twin2.set_ylabel("Error")
+
+ax.yaxis.label.set_color(Rs_plot.get_color())
+twin1.yaxis.label.set_color(Cs_plot.get_color())
+twin2.yaxis.label.set_color(losses_plot.get_color())
+
+ax.legend(handles=[Rs_plot, Cs_plot, losses_plot])
+
+plt.title('Diff. RC Lowpass Training')
+fig.tight_layout()  # otherwise the right y-label is slightly clipped
+plt.savefig('plots/RC_lpf.png')
 
 # %%
