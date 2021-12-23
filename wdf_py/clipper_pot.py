@@ -24,62 +24,55 @@ raw_data = raw_data.to_numpy()
 
 # %%
 # input = [0], output [1]
+FS = 50000
 start = int(500e3)
 N = int(20e3)
 x = raw_data[start:start+N, 0].astype(np.float32)
 R_data = np.ones_like(x) * 47e3
 y_ref = raw_data[start:start+N, 1].astype(np.float32)
 
-# %%
-# BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
-# x = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_x.csv", dtype=np.float32)
-# R_data = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_r.csv", dtype=np.float32)
-# y_ref = np.genfromtxt(f"{BASE_DIR}/test_data/clipper_pot_y.csv", dtype=np.float32)
-
-# %%
 print(x.shape)
 print(y_ref.shape)
 
-FS = 50000
-N = len(x)
-# x = x[:N]
-# R_data = R_data[:N]
-# y_ref = y_ref[:N]
-
 # %%
-n_batches = 1
+batch_size = 2048
+n_batches = N // batch_size
 
 data_in = np.stack([x, R_data], axis=0).transpose()
-data_in_batched = np.array(np.array_split(data_in, n_batches))
+data_in_trim = data_in[:(n_batches * batch_size), :]
+data_in_batched = np.stack(np.array_split(data_in_trim, n_batches))
+
 data_target = np.transpose(np.array([y_ref]))
+data_target_trim = data_target[:(n_batches * batch_size), :]
+data_target_batched = np.stack(np.array_split(data_target_trim, n_batches))
 
 print(data_in.shape)
 print(data_in_batched.shape)
-# print(data_target.shape)
+print(data_target.shape)
+print(data_target_batched.shape)
 
-# plt.plot(data_in[:, 0])
-plt.plot(np.log(data_in_batched[0, :, 1]) - 8)
-plt.plot(data_in_batched[0, :, 0])
-plt.plot(data_target[:,0])
+plot_batch = 5
+# plt.plot(np.log(data_in_batched[plot_batch, :, 1]) - 10)
+plt.plot(data_in_batched[plot_batch, :, 0])
+plt.plot(data_target_batched[plot_batch, :, 0])
 
 # %%
 class DenseLayer(tf.Module):
     """ Dense layer without weights sharing"""
-    def __init__(self, batch_size, in_size, out_size):
+    def __init__(self, in_size, out_size):
         super(DenseLayer, self).__init__()
-        bs = batch_size
-        self.kernel = tf.Variable(self.init_weights(bs, in_size, out_size), dtype=tf.float32)
-        self.bias = tf.Variable(self.init_bias(bs, out_size), dtype=tf.float32)
+        self.kernel = tf.Variable(self.init_weights(in_size, out_size), dtype=tf.float32)
+        self.bias = tf.Variable(self.init_bias(out_size), dtype=tf.float32)
 
-    def init_weights(self, batch_size, size1, size2):
+    def init_weights(self, size1, size2):
         initializer = tf.keras.initializers.Orthogonal()
         init = initializer(shape=(size1, size2))
-        return [init for _ in range(batch_size)]
+        return [init]
 
-    def init_bias(self, batch_size, size):
+    def init_bias(self, size):
         initializer = tf.keras.initializers.Zeros()
         init = initializer(shape=(size))
-        return [init for _ in range(batch_size)]
+        return [init]
 
     def set_weights(self, json_weights):
         weights = json_weights[0]
@@ -92,7 +85,7 @@ class DenseLayer(tf.Module):
         return tf.matmul(input, self.kernel) + self.bias
 
 class RootModel(tf.Module):
-    def __init__(self, json, batch_size=1):
+    def __init__(self, json):
         super(RootModel, self).__init__()
 
         self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
@@ -108,7 +101,7 @@ class RootModel(tf.Module):
                 next_size = l['shape'][-1]
                 print(f'Adding Dense layer with size [{prev_size}, {next_size}]')
 
-                self.layers.append(DenseLayer(batch_size, prev_size, next_size))
+                self.layers.append(DenseLayer(prev_size, next_size))
                 self.layers[-1].set_weights(l['weights'])
                 prev_size = next_size
 
@@ -139,7 +132,7 @@ class ClipperModel(tf.Module):
         self.C = wdf.Capacitor(2.2e-9, FS)
         self.P1 = wdf.Parallel(self.Vs, self.C)
 
-        self.model = RootModel(json, batch_size=n_batches)
+        self.model = RootModel(json)
 
     def forward(self, input):
         sequence_length = input.shape[1]
@@ -180,8 +173,8 @@ def esr_loss(target_y, predicted_y, emphasis_func=lambda x : x):
     mse = tf.math.reduce_sum(tf.math.square(target_yp - pred_yp))
     energy = tf.math.reduce_sum(tf.math.square(target_yp))
     
-    loss_unnorm = mse / (energy + eps)
-    return loss_unnorm / N
+    loss_unnorm = mse / tf.cast(energy + eps, tf.float32)
+    return tf.sqrt(loss_unnorm / N)
 
 esr_with_emph = lambda target, pred: esr_loss(target, pred, pre_emphasis_filter)
 
@@ -199,17 +192,18 @@ def bounds_loss(target_y, pred_y):
 
 mse_loss = tf.keras.losses.MeanSquaredError()
 # loss_func = lambda target, pred: 0.1 * esr_loss(target, pred) + 10 * mse_loss(target, pred)
-loss_func = mse_loss
+loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred)
 
 # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
-optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+optimizer = tf.keras.optimizers.Adam(learning_rate=4e-4)
 # optimizer = tf.keras.optimizers.Adagrad(learning_rate=1e-2, initial_accumulator_value=0.1, epsilon=1e-07,name='Adagrad')
 
 # %%
-for epoch in tqdm(range(51)):
+# for epoch in tqdm(range(501)):
+for epoch in range(501):
     with tf.GradientTape() as tape:
-        outs = model.forward(data_in_batched)[...,0]
-        loss = loss_func(outs, data_target)
+        outs = tf.transpose(model.forward(data_in_batched)[...,0], perm=[1, 0, 2])
+        loss = loss_func(outs, data_target_batched)
     
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -218,23 +212,22 @@ for epoch in tqdm(range(51)):
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
         plt.figure()
-        plt.plot(data_target[:,0])
-        plt.plot(outs.numpy().flatten(), '--')
-        plt.savefig(f'./plots/1N4148_clipper_pot_epoch_{epoch}.png')
+        plt.plot(data_target_batched[plot_batch, :, 0])
+        plt.plot(outs[plot_batch, :, 0], '--')
+        plt.savefig(f'./plots/scratch/1N4148_clipper_pot_epoch_{epoch}.png')
         plt.show()
 
 print(f'\nFinal Results:')
 print(f'    Loss: {loss}')
 
 # %%
-outs = model.forward(data_in_batched)[...,0].numpy().flatten()
+outs = tf.transpose(model.forward(data_in_batched)[...,0], perm=[1, 0, 2])
 
 # %%
-print(outs.shape)
-plt.plot(data_target[:,0])
-plt.plot(outs, '--')
+plt.plot(data_target_batched[plot_batch, :, 0])
+plt.plot(outs[plot_batch, :, 0], '--')
 # plt.ylim(-0.2, 0.2)
-plt.xlim(11150, 11900)
+# plt.xlim(11150, 11900)
 
 # %%
 def save_model_json(model):
