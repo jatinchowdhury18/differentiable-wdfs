@@ -195,12 +195,12 @@ mse_loss = tf.keras.losses.MeanSquaredError()
 loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred)
 
 # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
-optimizer = tf.keras.optimizers.Adam(learning_rate=4e-4)
+optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 # optimizer = tf.keras.optimizers.Adagrad(learning_rate=1e-2, initial_accumulator_value=0.1, epsilon=1e-07,name='Adagrad')
 
 # %%
-# for epoch in tqdm(range(501)):
-for epoch in range(501):
+for epoch in tqdm(range(501)):
+# for epoch in range(101):
     with tf.GradientTape() as tape:
         outs = tf.transpose(model.forward(data_in_batched)[...,0], perm=[1, 0, 2])
         loss = loss_func(outs, data_target_batched)
