@@ -60,8 +60,23 @@ for R_order in np.linspace(1, 9, 20):
     else:
         test_x = np.concatenate([test_x, in_vals])
 
-plt.plot(test_x[:,0])
-plt.plot(np.log(test_x[:,1]) / 2)
+# %%
+fig, ax1 = plt.subplots()
+
+ax1.set_xlabel('Time [samples]')
+ax1.set_ylabel('Incident Wave [V]')
+a_plot, = ax1.plot(test_x[:,0], label='a')
+
+ax2 = ax1.twinx()
+ax2.set_ylabel('Port Impedance [log(Ohms)]')
+R_plot, = ax2.plot(np.log(test_x[:,1]), color='red', label='log(R)')
+
+ax1.legend(handles=[a_plot, R_plot])
+
+plt.title('Diode Network Synthetic Training Data')
+
+fig.tight_layout()  # otherwise the right y-label is slightly clipped
+plt.savefig('plots/diodes_synth_training_data.png')
 
 # %%
 ideal_y = np.zeros_like(test_x[:,0])
@@ -119,11 +134,16 @@ diode_model.fit(test_x, ideal_y, epochs=2000)
 y_test = diode_model(test_x).numpy().flatten()
 
 # %%
-plt.plot(ideal_y)
-plt.plot(y_test, '--')
+plt.plot(-ideal_y, label='Target')
+plt.plot(-y_test, '--', label='Predicted')
 
 plt.xlim(0, 20000)
 plt.grid()
+
+plt.title('Pretrained Diode Output (1N4148)')
+plt.xlabel('Time [samples]')
+plt.ylabel('Reflected Wave [V]')
+plt.legend()
 
 plt.savefig(f'plots/{diode_to_train.name}_pretrained.png')
 
