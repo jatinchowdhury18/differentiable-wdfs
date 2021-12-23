@@ -25,8 +25,8 @@ raw_data = raw_data.to_numpy()
 # %%
 # input = [0], output [1]
 FS = 50000
-start = int(500e3)
-N = int(100e3)
+start = 0
+N = 1452164
 x = raw_data[start:start+N, 0].astype(np.float32)
 R_data = np.ones_like(x) * 47e3
 y_ref = raw_data[start:start+N, 1].astype(np.float32)
@@ -199,8 +199,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 # optimizer = tf.keras.optimizers.Adagrad(learning_rate=1e-2, initial_accumulator_value=0.1, epsilon=1e-07,name='Adagrad')
 
 # %%
-for epoch in tqdm(range(501)):
-# for epoch in range(101):
+for epoch in tqdm(range(1001)):
     with tf.GradientTape() as tape:
         outs = tf.transpose(model.forward(data_in_batched)[...,0], perm=[1, 0, 2])
         loss = loss_func(outs, data_target_batched)
@@ -208,14 +207,13 @@ for epoch in tqdm(range(501)):
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 20 == 0:
+    if epoch % 50 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
         plt.figure()
         plt.plot(data_target_batched[plot_batch, :, 0])
         plt.plot(outs[plot_batch, :, 0], '--')
         plt.savefig(f'./plots/scratch/1N4148_clipper_pot_epoch_{epoch}.png')
-        plt.show()
 
 print(f'\nFinal Results:')
 print(f'    Loss: {loss}')
