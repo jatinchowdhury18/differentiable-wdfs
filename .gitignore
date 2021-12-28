@@ -10,5 +10,5 @@ wdf_py/*_model
 # other extras
 .vscode
 *.png
-!wdf_py/plots/*.png
+!wdf_py/**/plots/*.png
 .DS_Store

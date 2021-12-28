@@ -1,7 +1,10 @@
 # %%
+import sys
+sys.path.insert(0, '../lib')
+
 import numpy as np
-import lib.tf_wdf as wdf
-from lib.tf_wdf import tf
+import tf_wdf as wdf
+from tf_wdf import tf
 import tqdm as tqdm
 import matplotlib.pyplot as plt
 import audio_dspy as adsp

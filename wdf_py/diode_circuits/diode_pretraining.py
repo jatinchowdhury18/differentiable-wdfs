@@ -1,10 +1,13 @@
 # %%
+import sys
+sys.path.insert(0, '../lib')
+
 import numpy as np
 from scipy.special import wrightomega
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from collections import namedtuple
-from lib.model_utils import save_model
+from model_utils import save_model
 
 # %%
 n_layers = 4
