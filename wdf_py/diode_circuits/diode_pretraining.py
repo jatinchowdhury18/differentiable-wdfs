@@ -10,7 +10,7 @@ from collections import namedtuple
 from model_utils import save_model
 
 # %%
-n_layers = 4
+n_layers = 2
 layer_size = 8
 
 DiodeConfig = namedtuple('DiodeConfig', ['name', 'Is', 'nabla', 'Vt'], defaults=['', 1.0e-9, 1.0, 25.85e-3])
@@ -98,7 +98,7 @@ plt.plot(ideal_y)
 # %%
 layer_xs = []
 inputs = tf.keras.Input(shape=(2,))
-for n in range(n_layers):
+for n in range(n_layers + 2):
     layer_in = inputs if n < 1 else layer_xs[n-1]
     layer_width = layer_size if n < n_layers - 1 else 1
     layer_act = 'tanh' if n < n_layers - 1 else 'linear'

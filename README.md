@@ -6,22 +6,12 @@ implementing differentiable wave digital filters
 neural networks, and allow for the automatic
 optimisation of WDF parameters.
 
-## Circuits to train
-- diode clipper with 1N4148 and pot. from ~10k - ~100k (3-4 steps)
-- diode clipper with [X DIODE] and pot. from ~10k - ~100k (3-4 steps)
-- diode clipper with 2x2 1N4148 and pot. from ~10k - ~100k (3-4 steps)
-- tube screamer
-  - buy one
-  - Keith's data
-  - build one?
-
-Wish list:
-- diode clipper with germanium diodes
-
 TODO:
-- record circuit data
-- train full circuit models
-- build a plugin for trained models
+- Diode clipper 1N4148 data with potentiometer, ~10k - ~100k (3-4 steps)
+- Diode clipper data with pot and multiple diodes in each direction
+- Try training diode models of different sizes (2x8, 2x16, 4x8, maybe 2x4?)
+- Tube screamer data with the same 1N4148 diodes
+- Plugin model for diode clipper with different models
 - find Kurt's tube screamer paper
 - look at Stefano D'Angelo's op-amp paper
 - try to reduce model size (grid-search, NEAT)

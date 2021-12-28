@@ -4,7 +4,6 @@ sys.path.insert(0, '../lib')
 sys.path.insert(0, './models')
 
 import numpy as np
-from scipy.special import wrightomega
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -14,11 +13,12 @@ from tf_wdf import tf
 from tqdm import tqdm
 import pathlib
 import json
+import pickle
 
 from model_utils import *
 
 # %%
-BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
+BASE_DIR = pathlib.Path(__file__).parent.parent.parent.resolve()
 raw_data = pd.read_csv(f"{BASE_DIR}/diode_dataset/trial_data/47k_2.2nF_1N4148.csv", header=9)
 raw_data = raw_data.to_numpy()
 
@@ -35,7 +35,7 @@ print(x.shape)
 print(y_ref.shape)
 
 # %%
-batch_size = 2048
+batch_size = 4096
 n_batches = N // batch_size
 
 data_in = np.stack([x, R_data], axis=0).transpose()
@@ -51,7 +51,7 @@ print(data_in_batched.shape)
 print(data_target.shape)
 print(data_target_batched.shape)
 
-plot_batch = 5
+plot_batch = 300
 # plt.plot(np.log(data_in_batched[plot_batch, :, 1]) - 10)
 plt.plot(data_in_batched[plot_batch, :, 0])
 plt.plot(data_target_batched[plot_batch, :, 0])
@@ -199,10 +199,32 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 # optimizer = tf.keras.optimizers.Adagrad(learning_rate=1e-2, initial_accumulator_value=0.1, epsilon=1e-07,name='Adagrad')
 
 # %%
+def plot_target_pred(target, predicted, epoch, diode_type, run):
+    plt.figure()
+    plt.plot(target, label='Target')
+    plt.plot(predicted, '--', label='Predicted')
+    plt.xlabel('Time [samples]')
+    plt.ylabel('Voltage')
+    plt.title(f'{diode_type} Diode Clipper, Epoch {epoch}')
+    plt.legend(loc='lower left')
+    plt.savefig(f'./plots/clipper_pot_{diode_type}_training_{run}/{diode_type}_clipper_pot_epoch_{epoch}.png')
+    plt.close()
+
+# %%
+DIODE_TYPE = '1N4148'
+TRAINING_RUN = 4
+
+skip_samples = 50 # skip the first few samples to let state build up
+
+history = { 'loss': [], 'mse': [], 'esr': [] }
 for epoch in tqdm(range(1001)):
     with tf.GradientTape() as tape:
         outs = tf.transpose(model.forward(data_in_batched)[...,0], perm=[1, 0, 2])
-        loss = loss_func(outs, data_target_batched)
+        loss = loss_func(outs[:, skip_samples:, :], data_target_batched[:, skip_samples:, :])
+
+    history['loss'].append(loss)
+    history['mse'].append(mse_loss(outs[:, skip_samples:, :], data_target_batched[:, skip_samples:, :]))
+    history['esr'].append(esr_loss(outs[:, skip_samples:, :], data_target_batched[:, skip_samples:, :]))
     
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -210,20 +232,22 @@ for epoch in tqdm(range(1001)):
     if epoch % 50 == 0:
         print(f'\nCheckpoint (Epoch = {epoch}):')
         print(f'    Loss: {loss}')
-        plt.figure()
-        plt.plot(data_target_batched[plot_batch, :, 0])
-        plt.plot(outs[plot_batch, :, 0], '--')
-        plt.savefig(f'./plots/scratch/1N4148_clipper_pot_epoch_{epoch}.png')
+        target = data_target_batched[plot_batch, skip_samples:, 0]
+        pred = outs[plot_batch, skip_samples:, 0]
+        plot_target_pred(target, pred, epoch, DIODE_TYPE, TRAINING_RUN)
 
 print(f'\nFinal Results:')
 print(f'    Loss: {loss}')
+with open(f'./histories/clipper_pot_{DIODE_TYPE}_training_{TRAINING_RUN}_history.pkl', 'wb') as f:
+    pickle.dump(history, f)
 
 # %%
 outs = tf.transpose(model.forward(data_in_batched)[...,0], perm=[1, 0, 2])
 
 # %%
-plt.plot(data_target_batched[plot_batch, :, 0])
-plt.plot(outs[plot_batch, :, 0], '--')
+target = data_target_batched[plot_batch, skip_samples:, 0]
+pred = outs[plot_batch, skip_samples:, 0]
+plot_target_pred(target, pred, 'final', DIODE_TYPE, TRAINING_RUN)
 # plt.ylim(-0.2, 0.2)
 # plt.xlim(11150, 11900)
 
@@ -258,6 +282,6 @@ def save_model(model, filename):
     with open(filename, 'w') as outfile:
         json.dump(model_dict, outfile, cls=NumpyArrayEncoder, indent=4)
 
-save_model(model.model, './models/1N4148_clipper_pot.json')
+save_model(model.model, f'./models/{DIODE_TYPE}_clipper_pot_training_{TRAINING_RUN}.json')
 
 # %%
