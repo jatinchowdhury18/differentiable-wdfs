@@ -7,8 +7,11 @@ __pycache__
 # Tensorflow artifacts
 wdf_py/*_model
 
-# other extras
+# IDE settings
 .vscode
+.idea
+
+# other extras
 *.png
 !wdf_py/**/plots/*.png
 .DS_Store
