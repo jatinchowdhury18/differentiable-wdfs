@@ -1,5 +1,7 @@
 # %%
 import sys
+
+from tensorflow.python.ops.gen_array_ops import prevent_gradient
 sys.path.insert(0, '../lib')
 sys.path.insert(0, './models')
 
@@ -11,14 +13,27 @@ import tf_wdf as wdf
 from tf_wdf import tf
 
 from tqdm import tqdm
-import pathlib
+from pathlib import Path
 import json
 import pickle
 
 from model_utils import *
 
 # %%
-BASE_DIR = pathlib.Path(__file__).parent.parent.parent.resolve()
+n_layers = 4
+layer_size = 8
+diode_name = '1N4148'
+training_number = 1
+
+pretrained_model = f'{diode_name}_{n_layers}x{layer_size}_pretrained'
+model_name = f'{diode_name}_{n_layers}x{layer_size}_training_{training_number}'
+plots_dir = Path(f'./plots/{model_name}')
+
+assert not plots_dir.exists(), "Plots for this training run have already been created!"
+plots_dir.mkdir()
+
+# %%
+BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 raw_data = pd.read_csv(f"{BASE_DIR}/diode_dataset/trial_data/47k_2.2nF_1N4148.csv", header=9)
 raw_data = raw_data.to_numpy()
 
@@ -157,7 +172,7 @@ class ClipperModel(tf.Module):
         return output_sequence
 
 # %%
-with open("./models/1N4148_pretrained_model.json", "r") as read_file:
+with open(f"./models/pretrained/{pretrained_model}_model.json", "r") as read_file:
     model_json = json.load(read_file)
 
 model = ClipperModel(model_json)
@@ -199,22 +214,19 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 # optimizer = tf.keras.optimizers.Adagrad(learning_rate=1e-2, initial_accumulator_value=0.1, epsilon=1e-07,name='Adagrad')
 
 # %%
-def plot_target_pred(target, predicted, epoch, diode_type, run):
+def plot_target_pred(target, predicted, epoch):
     plt.figure()
     plt.plot(target[:batch_size // 3], label='Target')
     plt.plot(predicted[:batch_size // 3], '--', label='Predicted')
     plt.xlabel('Time [samples]')
     plt.ylabel('Voltage')
-    plt.title(f'{diode_type} Diode Clipper, Epoch {epoch}')
+    plt.title(f'Diode Clipper ({diode_name}, {n_layers}x{layer_size}), Epoch {epoch}')
     plt.legend(loc='lower left')
-    # plt.savefig(f'./plots/clipper_pot_{diode_type}_training_{run}/{diode_type}_clipper_pot_epoch_{epoch}.png')
-    # plt.close()
+
+    plt.savefig(f'./{plots_dir}/epoch_{epoch}.png')
+    plt.close()
 
 # %%
-DIODE_TYPE = '1N4148'
-TRAINING_RUN = 5
-# TODO: label by model size
-
 skip_samples = 50 # skip the first few samples to let state build up
 history = { 'loss': [], 'mse': [], 'esr': [] }
 
@@ -236,11 +248,11 @@ for epoch in tqdm(range(1001)):
         print(f'    Loss: {loss}')
         target = data_target_batched[plot_batch, skip_samples:, 0]
         pred = outs[plot_batch, skip_samples:, 0]
-        plot_target_pred(target, pred, epoch, DIODE_TYPE, TRAINING_RUN)
+        plot_target_pred(target, pred, epoch)
 
 print(f'\nFinal Results:')
 print(f'    Loss: {loss}')
-with open(f'./histories/clipper_pot_{DIODE_TYPE}_training_{TRAINING_RUN}_history.pkl', 'wb') as f:
+with open(f'./histories/{model_name}_history.pkl', 'wb') as f:
     pickle.dump(history, f)
 
 # %%
@@ -249,7 +261,7 @@ outs = tf.transpose(model.forward(data_in_batched)[...,0], perm=[1, 0, 2])
 # %%
 target = data_target_batched[plot_batch, skip_samples:, 0]
 pred = outs[plot_batch, skip_samples:, 0]
-plot_target_pred(target, pred, 'final', DIODE_TYPE, TRAINING_RUN)
+plot_target_pred(target, pred, 'final')
 # plt.ylim(-0.2, 0.2)
 # plt.xlim(11150, 11900)
 
@@ -284,6 +296,6 @@ def save_model(model, filename):
     with open(filename, 'w') as outfile:
         json.dump(model_dict, outfile, cls=NumpyArrayEncoder, indent=4)
 
-save_model(model.model, f'./models/{DIODE_TYPE}_clipper_pot_training_{TRAINING_RUN}.json')
+save_model(model.model, f'./models/{model_name}.json')
 
 # %%
