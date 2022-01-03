@@ -1,5 +1,5 @@
 # cpp build artifacts
-build/
+build*/
 
 # python artifacts
 __pycache__
@@ -12,7 +12,5 @@ wdf_py/*_model
 .idea
 
 # other extras
-*.png
-!wdf_py/**/plots/*.png
 .DS_Store
 *.pkl

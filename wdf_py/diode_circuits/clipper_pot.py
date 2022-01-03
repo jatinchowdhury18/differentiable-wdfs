@@ -51,7 +51,7 @@ print(data_in_batched.shape)
 print(data_target.shape)
 print(data_target_batched.shape)
 
-plot_batch = 300
+plot_batch = 315
 # plt.plot(np.log(data_in_batched[plot_batch, :, 1]) - 10)
 plt.plot(data_in_batched[plot_batch, :, 0])
 plt.plot(data_target_batched[plot_batch, :, 0])
@@ -201,22 +201,24 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 # %%
 def plot_target_pred(target, predicted, epoch, diode_type, run):
     plt.figure()
-    plt.plot(target, label='Target')
-    plt.plot(predicted, '--', label='Predicted')
+    plt.plot(target[:batch_size // 3], label='Target')
+    plt.plot(predicted[:batch_size // 3], '--', label='Predicted')
     plt.xlabel('Time [samples]')
     plt.ylabel('Voltage')
     plt.title(f'{diode_type} Diode Clipper, Epoch {epoch}')
     plt.legend(loc='lower left')
-    plt.savefig(f'./plots/clipper_pot_{diode_type}_training_{run}/{diode_type}_clipper_pot_epoch_{epoch}.png')
-    plt.close()
+    # plt.savefig(f'./plots/clipper_pot_{diode_type}_training_{run}/{diode_type}_clipper_pot_epoch_{epoch}.png')
+    # plt.close()
 
 # %%
 DIODE_TYPE = '1N4148'
-TRAINING_RUN = 4
+TRAINING_RUN = 5
+# TODO: label by model size
 
 skip_samples = 50 # skip the first few samples to let state build up
-
 history = { 'loss': [], 'mse': [], 'esr': [] }
+
+# %%
 for epoch in tqdm(range(1001)):
     with tf.GradientTape() as tape:
         outs = tf.transpose(model.forward(data_in_batched)[...,0], perm=[1, 0, 2])

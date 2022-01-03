@@ -9,8 +9,10 @@ import tensorflow as tf
 from collections import namedtuple
 from model_utils import save_model
 
+plots_dir = 'plots/pretraining'
+
 # %%
-n_layers = 2
+n_layers = 4
 layer_size = 8
 
 DiodeConfig = namedtuple('DiodeConfig', ['name', 'Is', 'nabla', 'Vt'], defaults=['', 1.0e-9, 1.0, 25.85e-3])
@@ -19,6 +21,8 @@ default_diode = DiodeConfig('DefaultDiode')
 diode_1n4148 = DiodeConfig('1N4148', Is=4.352e-9, nabla=1.906) # borrowed from: https://github.com/neiser/spice-padiwa-amps/blob/master/1N4148.lib
 
 diode_to_train = diode_1n4148
+
+model_name = f'{diode_to_train.name}_{n_layers}x{layer_size}_pretrained'
 
 # %%
 # WDF diode pair equations:
@@ -79,7 +83,7 @@ ax1.legend(handles=[a_plot, R_plot])
 plt.title('Diode Network Synthetic Training Data')
 
 fig.tight_layout()  # otherwise the right y-label is slightly clipped
-plt.savefig('plots/diodes_synth_training_data.png')
+plt.savefig(f'{plots_dir}/diodes_synth_training_data.png')
 
 # %%
 ideal_y = np.zeros_like(test_x[:,0])
@@ -126,6 +130,7 @@ pre_loss_mse = mse_loss(ideal_y, diode_model(test_x)).numpy()
 pre_loss_esr = esr_loss(ideal_y, diode_model(test_x)).numpy()
 print(f'Loss before training: {pre_loss_mse}, {pre_loss_esr}')
 
+@tf.autograph.experimental.do_not_convert
 def my_loss(target_y, predicted_y):
     return mse_loss(target_y, predicted_y) + esr_loss(target_y, predicted_y)
 
@@ -134,7 +139,12 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=2e-5)
 diode_model.compile(optimizer, my_loss)
 diode_model.fit(test_x, ideal_y, epochs=2000)
 
+# %%
 y_test = diode_model(test_x).numpy().flatten()
+
+pre_loss_mse = mse_loss(ideal_y, y_test).numpy()
+pre_loss_esr = esr_loss(ideal_y, tf.cast(y_test, tf.float32)).numpy()
+print(f'Loss after training: {pre_loss_mse}, {pre_loss_esr}')
 
 # %%
 plt.plot(-ideal_y, label='Target')
@@ -143,14 +153,21 @@ plt.plot(-y_test, '--', label='Predicted')
 plt.xlim(0, 20000)
 plt.grid()
 
-plt.title('Pretrained Diode Output (1N4148)')
+plt.title(f'Pretrained Diode Output ({diode_to_train.name}, {n_layers}x{layer_size})')
 plt.xlabel('Time [samples]')
 plt.ylabel('Reflected Wave [V]')
 plt.legend()
 
-plt.savefig(f'plots/{diode_to_train.name}_pretrained.png')
+plt.savefig(f'{plots_dir}/{model_name}.png')
 
 # %%
-save_model(diode_model, f'models/{diode_to_train.name}_pretrained_model.json')
+save_model(diode_model, f'models/pretrained/{model_name}_model.json')
 
 # %%
+# Training Results:
+# 1N4148:
+# - 2x4:  MSE = 45.4e-4, ESR = 22.6e-4
+# - 2x8:  MSE = 3.02e-4, ESR = 5.84e-4
+# - 2x16: MSE = 1.34e-4, ESR = 3.89e-4
+# - 4x4:  MSE = 9.73e-4, ESR = 10.5e-4
+# - 4x8:  MSE = 0.61e-4, ESR = 2.61e-4

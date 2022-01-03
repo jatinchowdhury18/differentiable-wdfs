@@ -15,6 +15,7 @@ TODO:
 - find Kurt's tube screamer paper
 - look at Stefano D'Angelo's op-amp paper
 - try to reduce model size (grid-search, NEAT)
+- set up benckmarks for different model sizes + WDF implementation
 
 ## Settings up the Python environment
 
