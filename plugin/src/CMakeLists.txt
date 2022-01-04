@@ -1,6 +1,9 @@
 target_sources(DifferentiableWDFs PRIVATE
     DifferentiableWDFPlugin.cpp
 
+    dsp/diode_clipper/DiodeClipper.cpp
+
+    gui/CircuitModelGUI.cpp
     gui/PluginEditor.cpp
 )
 

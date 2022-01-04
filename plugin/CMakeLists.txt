@@ -1,10 +1,7 @@
 # juce_set_vst2_sdk_path(C:/SDKs/VST_SDK/VST2_SDK)
+
 # set default plugin formats to build
-if(IOS)
-    set(JUCE_FORMATS Standalone AUv3)
-else()
-    set(JUCE_FORMATS AU VST3 Standalone)
-endif()
+set(JUCE_FORMATS AU VST3 Standalone)
 
 # Build VST2 is SDK set
 if(TARGET juce_vst2_sdk)
