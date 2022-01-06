@@ -24,14 +24,13 @@ CircuitModelGUI::CircuitModelGUI (const CircuitModel& model, AudioProcessorValue
     }
 }
 
-void CircuitModelGUI::paint (Graphics& g)
+void CircuitModelGUI::paint (Graphics&)
 {
 }
 
 void CircuitModelGUI::resized()
 {
     const auto numElements = sliders.size();
-    const auto width = getWidth();
     const auto elWidth = proportionOfWidth (1.0f / (float) numElements);
 
     auto bounds = getLocalBounds();
