@@ -1,9 +1,19 @@
 {
-    "in_shape": 2,
+    "in_shape": [
+        [
+            null,
+            2
+        ]
+    ],
     "layers": [
         {
             "type": "dense",
-            "shape": 8,
+            "shape": [
+                [
+                    null,
+                    8
+                ]
+            ],
             "weights": [
                 [
                     [
@@ -46,7 +56,12 @@
         },
         {
             "type": "dense",
-            "shape": 8,
+            "shape": [
+                [
+                    null,
+                    8
+                ]
+            ],
             "weights": [
                 [
                     [
@@ -149,7 +164,12 @@
         },
         {
             "type": "dense",
-            "shape": 8,
+            "shape": [
+                [
+                    null,
+                    8
+                ]
+            ],
             "weights": [
                 [
                     [
@@ -252,7 +272,12 @@
         },
         {
             "type": "dense",
-            "shape": 1,
+            "shape": [
+                [
+                    null,
+                    1
+                ]
+            ],
             "weights": [
                 [
                     [

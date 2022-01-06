@@ -1,7 +1,5 @@
 # %%
 import sys
-
-from tensorflow.python.ops.gen_array_ops import prevent_gradient
 sys.path.insert(0, '../lib')
 sys.path.insert(0, './models')
 
@@ -11,6 +9,7 @@ import pandas as pd
 
 import tf_wdf as wdf
 from tf_wdf import tf
+from layers import DenseRootModel, DenseLayer
 
 from tqdm import tqdm
 from pathlib import Path
@@ -72,74 +71,6 @@ plt.plot(data_in_batched[plot_batch, :, 0])
 plt.plot(data_target_batched[plot_batch, :, 0])
 
 # %%
-class DenseLayer(tf.Module):
-    """ Dense layer without weights sharing"""
-    def __init__(self, in_size, out_size):
-        super(DenseLayer, self).__init__()
-        self.kernel = tf.Variable(self.init_weights(in_size, out_size), dtype=tf.float32)
-        self.bias = tf.Variable(self.init_bias(out_size), dtype=tf.float32)
-
-    def init_weights(self, size1, size2):
-        initializer = tf.keras.initializers.Orthogonal()
-        init = initializer(shape=(size1, size2))
-        return [init]
-
-    def init_bias(self, size):
-        initializer = tf.keras.initializers.Zeros()
-        init = initializer(shape=(size))
-        return [init]
-
-    def set_weights(self, json_weights):
-        weights = json_weights[0]
-        self.kernel.assign(np.array([weights]))
-    
-        bias = json_weights[1]
-        self.bias.assign(np.array([bias]))
-
-    def __call__(self, input):
-        return tf.matmul(input, self.kernel) + self.bias
-
-class RootModel(tf.Module):
-    def __init__(self, json):
-        super(RootModel, self).__init__()
-
-        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
-        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
-
-        in_size = json['in_shape'][-1]
-        layers_json = json['layers']
-        self.layers = []
-
-        prev_size = in_size
-        for l in layers_json:
-            if l['type'] == 'dense':
-                next_size = l['shape'][-1]
-                print(f'Adding Dense layer with size [{prev_size}, {next_size}]')
-
-                self.layers.append(DenseLayer(prev_size, next_size))
-                self.layers[-1].set_weights(l['weights'])
-                prev_size = next_size
-
-                if l['activation'] == 'relu':
-                    print('Adding ReLU activation layer')
-                    self.layers.append(tf.nn.relu)
-                elif l['activation'] == 'tanh':
-                    print('Adding tanh activation layer')
-                    self.layers.append(tf.nn.tanh)
-
-    def incident(self, x):
-        self.a = x[:, :, 0]
-        self.model_in = x
-
-    def reflected(self):
-        x = self.model_in
-        for l in self.layers:
-            x = l(x)
-
-        self.b = -1 * x
-        return self.b
-
-# %%
 class ClipperModel(tf.Module):
     def __init__(self, json):
         super(ClipperModel, self).__init__()
@@ -147,7 +78,7 @@ class ClipperModel(tf.Module):
         self.C = wdf.Capacitor(2.2e-9, FS)
         self.P1 = wdf.Parallel(self.Vs, self.C)
 
-        self.model = RootModel(json)
+        self.model = DenseRootModel(json)
 
     def forward(self, input):
         sequence_length = input.shape[1]
@@ -268,12 +199,12 @@ plot_target_pred(target, pred, 'final')
 # %%
 def save_model_json(model):
     def get_weights(layer):
-        weights = layer.kernel.numpy()
-        bias = layer.bias.numpy()
+        weights = layer.kernel.numpy()[0]
+        bias = layer.bias.numpy()[0]
         return [weights, bias]
 
     model_dict = {}
-    model_dict["in_shape"] = 2
+    model_dict["in_shape"] = (None, 2)
     layers = []
     for layer in model.layers:
         if layer == tf.nn.tanh:
@@ -283,8 +214,9 @@ def save_model_json(model):
         if isinstance(layer, DenseLayer):
             layer_dict = {
                 "type": 'dense',
-                "shape": layer.bias.shape[-1],
-                "weights": get_weights(layer)
+                "shape": (None, layer.bias.shape[-1]),
+                "weights": get_weights(layer),
+                "activation": ""
             }
         layers.append(layer_dict)
 
