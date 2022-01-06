@@ -1,6 +1,6 @@
 #pragma once
 
-#include "DifferentiableWDFPlugin.h"
+#include "CPUMeter.h"
 #include "CircuitModelGUI.h"
 
 class PluginEditor : public AudioProcessorEditor
@@ -16,6 +16,7 @@ private:
 
     ComboBox circuitModelSelector;
     CircuitModelGUI modelGui;
+    CPUMeter cpuMeter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginEditor)
 };

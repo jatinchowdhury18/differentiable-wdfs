@@ -7,10 +7,12 @@ constexpr float topBarHeight = 0.15f;
 
 PluginEditor::PluginEditor (DifferentiableWDFPlugin& p) : AudioProcessorEditor (p),
                                                           plugin (p),
-                                                          modelGui (p.getDiodeClipper(), p.getVTS())
+                                                          modelGui (p.getDiodeClipper(), p.getVTS()),
+                                                          cpuMeter (p)
 {
     setSize (400, 400);
 
+    addAndMakeVisible (cpuMeter);
     addAndMakeVisible (circuitModelSelector);
     addAndMakeVisible (modelGui);
 }
@@ -35,7 +37,9 @@ void PluginEditor::resized()
     auto bounds = getLocalBounds();
     auto topBarBounds = bounds.removeFromTop (proportionOfHeight (topBarHeight));
 
-    auto selectorBounds = topBarBounds.removeFromRight (proportionOfWidth (0.5f)).reduced (10);
-    circuitModelSelector.setBounds (selectorBounds);
+    topBarBounds.removeFromLeft (proportionOfWidth (0.5f));
+    circuitModelSelector.setBounds (topBarBounds.removeFromLeft (proportionOfWidth (0.32f)).reduced (5, 10));
+    cpuMeter.setBounds (topBarBounds.reduced (5, 10));
+
     modelGui.setBounds (bounds);
 }

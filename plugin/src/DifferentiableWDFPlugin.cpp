@@ -17,6 +17,8 @@ void DifferentiableWDFPlugin::prepareToPlay (double sampleRate, int samplesPerBl
     diodeClipper.prepare (sampleRate, samplesPerBlock);
 
     monoBuffer.setSize (1, samplesPerBlock);
+
+    loadMeasurer.reset (sampleRate, samplesPerBlock);
 }
 
 void DifferentiableWDFPlugin::releaseResources()
@@ -27,6 +29,8 @@ void DifferentiableWDFPlugin::processAudioBlock (AudioBuffer<float>& buffer)
 {
     const auto numChannels = buffer.getNumChannels();
     const auto numSamples = buffer.getNumSamples();
+
+    AudioProcessLoadMeasurer::ScopedTimer loadTimer { loadMeasurer, numSamples };
 
     // sum input to mono
     if (numChannels == 1)

@@ -21,12 +21,16 @@ public:
     AudioProcessorEditor* createEditor() override;
 
     auto& getVTS() { return vts; }
+    auto& getLoadMeasurer() { return loadMeasurer; }
+
     auto& getDiodeClipper() { return diodeClipper; }
 
 private:
     DiodeClipper diodeClipper;
 
     AudioBuffer<float> monoBuffer;
+
+    AudioProcessLoadMeasurer loadMeasurer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DifferentiableWDFPlugin)
 };
