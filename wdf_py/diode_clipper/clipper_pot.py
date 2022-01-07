@@ -86,6 +86,8 @@ class ClipperModel(tf.Module):
         input = tf.cast(tf.expand_dims(input, axis=-1), dtype=tf.float32)
         output_sequence = tf.TensorArray(dtype=tf.float32, size=sequence_length, clear_after_read=False)
 
+        self.C.reset()
+
         for i in range(sequence_length):
             self.Vs.set_voltage(input[:, i, 0:1])
 

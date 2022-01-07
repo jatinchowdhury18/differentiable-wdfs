@@ -41,7 +41,7 @@ class ResistiveVoltageSource(tf.Module):
         self.a = x
 
     def reflected(self):
-        self.b = self.Vs
+        self.b = self.Vs * tf.ones_like(self.a)
         return self.b
 
 class Resistor(tf.Module):
@@ -60,7 +60,7 @@ class Resistor(tf.Module):
         self.a = x
 
     def reflected(self):
-        self.b = tf.zeros_like(self.b)
+        self.b = tf.zeros_like(self.a)
         return self.b
 
 class Capacitor(tf.Module):
@@ -78,6 +78,9 @@ class Capacitor(tf.Module):
 
     def calc_impedance(self):
         self.R = tf.math.reciprocal(self.C * (2.0 * self.FS))
+
+    def reset(self):
+        self.z = tf.zeros_like(self.z)
 
     def incident(self, x):
         self.a = x

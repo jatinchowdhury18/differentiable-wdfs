@@ -102,10 +102,10 @@ plt.plot(ideal_y)
 # %%
 layer_xs = []
 inputs = tf.keras.Input(shape=(2,))
-for n in range(n_layers + 1):
+for n in range(n_layers + 2):
     layer_in = inputs if n < 1 else layer_xs[n-1]
-    layer_width = layer_size if n < n_layers else 1
-    layer_act = 'tanh' if n < n_layers else 'linear'
+    layer_width = layer_size if n < n_layers + 1 else 1
+    layer_act = 'tanh' if n < n_layers + 1 else 'linear'
     layer_xs.append(tf.keras.layers.Dense(layer_width,
                                           activation=layer_act,
                                           kernel_initializer='orthogonal')(layer_in))
@@ -166,8 +166,8 @@ save_model(diode_model, f'models/pretrained/{model_name}_model.json')
 # %%
 # Training Results:
 # 1N4148:
-# - 2x4:  MSE = 12.4e-4, ESR = 11.8e-4
-# - 2x8:  MSE = 2.25e-4, ESR = 5.05e-4
-# - 2x16: MSE = 0.28e-4, ESR = 1.77e-4
-# - 4x4:  MSE = 12.8e-4, ESR = 12.0e-4
-# - 4x8:  MSE = 0.97e-4, ESR = 3.32e-4
+# - 2x4:  MSE = 1.34e-3, ESR = 1.23e-3
+# - 2x8:  MSE = 5.51e-5, ESR = 2.49e-4
+# - 2x16: MSE = 7.98e-6, ESR = 9.49e-5
+# - 4x4:  MSE = 6.38e-4, ESR = 8.48e-4
+# - 4x8:  MSE = 4.43e-5, ESR = 2.24e-4
