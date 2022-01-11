@@ -8,3 +8,14 @@ target_sources(DifferentiableWDFs PRIVATE
 )
 
 target_precompile_headers(DifferentiableWDFs PRIVATE pch.h)
+
+juce_add_binary_data(ModelData
+    NAMESPACE ModelData
+    HEADER_NAME ModelData.h
+    SOURCES
+        ../../wdf_py/diode_clipper/models/1N4148_4x8_training_1.json
+)
+
+# Need to build BinaryData with -fPIC flag on Linux
+set_target_properties(ModelData PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE)

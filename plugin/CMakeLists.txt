@@ -28,4 +28,7 @@ target_compile_definitions(DifferentiableWDFs PUBLIC
     JUCE_VST3_CAN_REPLACE_VST2=0
 )
 
-target_link_libraries(DifferentiableWDFs PRIVATE juce_plugin_modules)
+target_link_libraries(DifferentiableWDFs PRIVATE
+    juce_plugin_modules
+    ModelData
+)

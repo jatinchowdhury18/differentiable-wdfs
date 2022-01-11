@@ -12,5 +12,6 @@
 
 // Any other widely used headers that don't change...
 #include <RTNeural/RTNeural.h>
+#include <ModelData.h>
 
 namespace wdft = chowdsp::WDFT;

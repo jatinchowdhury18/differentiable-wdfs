@@ -10,7 +10,7 @@ PluginEditor::PluginEditor (DifferentiableWDFPlugin& p) : AudioProcessorEditor (
                                                           modelGui (p.getDiodeClipper(), p.getVTS()),
                                                           cpuMeter (p)
 {
-    setSize (400, 400);
+    setSize (600, 400);
 
     addAndMakeVisible (cpuMeter);
     addAndMakeVisible (circuitModelSelector);
