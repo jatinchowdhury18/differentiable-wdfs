@@ -2,7 +2,43 @@
 
 #include <pch.h>
 
-template <typename Next>
+template <int NLayers, int HiddenSize>
+struct DiodeModelType;
+
+template <int HiddenSize>
+struct DiodeModelType<2, HiddenSize>
+{
+    using ModelType = RTNeural::ModelT<float,
+                                       2,
+                                       1,
+                                       RTNeural::DenseT<float, 2, HiddenSize>,          // Input layer
+                                       RTNeural::TanhActivationT<float, HiddenSize>,
+                                       RTNeural::DenseT<float, HiddenSize, HiddenSize>, // Hidden layer 1
+                                       RTNeural::TanhActivationT<float, HiddenSize>,
+                                       RTNeural::DenseT<float, HiddenSize, HiddenSize>, // Hidden layer 2
+                                       RTNeural::TanhActivationT<float, HiddenSize>,
+                                       RTNeural::DenseT<float, HiddenSize, 1>>;         // Output layer
+};
+
+template <int HiddenSize>
+struct DiodeModelType<4, HiddenSize>
+{
+    // @TODO: Needs one more hidden layer!!
+    using ModelType = RTNeural::ModelT<float,
+                                       2,
+                                       1,
+                                       RTNeural::DenseT<float, 2, HiddenSize>,          // Input layer
+                                       RTNeural::TanhActivationT<float, HiddenSize>,
+                                       RTNeural::DenseT<float, HiddenSize, HiddenSize>, // Hidden layer 1
+                                       RTNeural::TanhActivationT<float, HiddenSize>,
+                                       RTNeural::DenseT<float, HiddenSize, HiddenSize>, // Hidden layer 2
+                                       RTNeural::TanhActivationT<float, HiddenSize>,
+                                       RTNeural::DenseT<float, HiddenSize, HiddenSize>, // Hidden layer 3
+                                       RTNeural::TanhActivationT<float, HiddenSize>,
+                                       RTNeural::DenseT<float, HiddenSize, 1>>;         // Output layer
+};
+
+template <typename Next, int NLayers, int HiddenSize>
 class DiodePairNeuralModel : public wdft::RootWDF
 {
 public:
@@ -41,18 +77,7 @@ private:
     const Next& next;
     float logR = 1.0f;
 
-    RTNeural::ModelT<float,
-                     2,
-                     1,
-                     RTNeural::DenseT<float, 2, 8>,
-                     RTNeural::TanhActivationT<float, 8>,
-                     RTNeural::DenseT<float, 8, 8>,
-                     RTNeural::TanhActivationT<float, 8>,
-                     RTNeural::DenseT<float, 8, 8>,
-                     RTNeural::TanhActivationT<float, 8>,
-                     RTNeural::DenseT<float, 8, 8>,
-                     RTNeural::TanhActivationT<float, 8>,
-                     RTNeural::DenseT<float, 8, 1>> model;
+    typename DiodeModelType<NLayers, HiddenSize>::ModelType model;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DiodePairNeuralModel)
 };
