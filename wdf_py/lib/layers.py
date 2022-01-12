@@ -3,18 +3,16 @@ import tensorflow as tf
 
 class DenseLayer(tf.Module):
     """ Dense layer without weights sharing"""
-    def __init__(self, in_size, out_size):
+    def __init__(self, in_size, out_size, kernel_init=tf.keras.initializers.Orthogonal(), bias_init=tf.keras.initializers.Zeros()):
         super(DenseLayer, self).__init__()
-        self.kernel = tf.Variable(self.init_weights(in_size, out_size), dtype=tf.float32)
-        self.bias = tf.Variable(self.init_bias(out_size), dtype=tf.float32)
+        self.kernel = tf.Variable(self.init_weights(in_size, out_size, kernel_init), dtype=tf.float32)
+        self.bias = tf.Variable(self.init_bias(out_size, bias_init), dtype=tf.float32)
 
-    def init_weights(self, size1, size2):
-        initializer = tf.keras.initializers.Orthogonal()
+    def init_weights(self, size1, size2, initializer):
         init = initializer(shape=(size1, size2))
         return [init]
 
-    def init_bias(self, size):
-        initializer = tf.keras.initializers.Zeros()
+    def init_bias(self, size, initializer):
         init = initializer(shape=(size))
         return [init]
 
