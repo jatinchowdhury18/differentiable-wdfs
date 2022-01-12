@@ -6,15 +6,33 @@ implementing differentiable wave digital filters
 neural networks, and allow for the automatic
 optimisation of WDF parameters.
 
+- 1U-1D diode clipper
+  - [x] pretraining
+  - [ ] fully trained models
+  - [x] real-time implementation
+- NU-ND diode clipper
+  - [ ] pretraining
+  - [ ] fully trained models
+- 1U-1D tube screamer (w/ same diodes)
+  - [ ] pretraining
+  - [ ] fully trained models
+
+- Chris:
+  - finish diode data
+  - build tube screamer
+  - tube screamer data w/ different resistor values
+  - work on training for full circuit, 1U-1D (w/ different model sizes)
+
+- Jatin:
+  - generate R-type scattering matrix for tube screamer
+  - pretraining for other diode configs
+  - work on training for full circuit. NU-ND (w/ 2x8 models)
+  - keep working on plugin
+  - work on benchmarks w/ plugin
+
 TODO:
-- Diode clipper 1N4148 data with potentiometer, ~10k - ~100k (3-4 steps)
-- Diode clipper data with pot and multiple diodes in each direction
-- Try training diode models of different sizes (2x8, 2x16, 4x8, maybe 2x4?)
 - Tube screamer data with the same 1N4148 diodes
 - Plugin model for diode clipper with different models
-- find Kurt's tube screamer paper
-- look at Stefano D'Angelo's op-amp paper
-- try to reduce model size (grid-search, NEAT)
 - set up benckmarks for different model sizes + WDF implementation
 
 ## Settings up the Python environment
