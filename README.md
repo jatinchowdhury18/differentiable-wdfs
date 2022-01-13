@@ -25,7 +25,6 @@ optimisation of WDF parameters.
 
 - Jatin:
   - generate R-type scattering matrix for tube screamer
-  - pretraining for other diode configs
   - work on training for full circuit. NU-ND (w/ 2x8 models)
   - keep working on plugin
   - work on benchmarks w/ plugin
