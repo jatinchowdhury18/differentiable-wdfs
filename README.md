@@ -11,14 +11,15 @@ optimisation of WDF parameters.
   - [ ] fully trained models
   - [x] real-time implementation
 - NU-ND diode clipper
-  - [ ] pretraining
+  - [x] pretraining
   - [ ] fully trained models
 - 1U-1D tube screamer (w/ same diodes)
   - [ ] pretraining
   - [ ] fully trained models
 
 - Chris:
-  - finish diode data
+  - pictures of measurement setup
+  - note measurement devices
   - build tube screamer
   - tube screamer data w/ different resistor values
   - work on training for full circuit, 1U-1D (w/ different model sizes)

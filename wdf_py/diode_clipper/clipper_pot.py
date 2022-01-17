@@ -1,13 +1,11 @@
 # %%
 import sys
 
-from wdf_py.lib.dataimport import createDataset
 sys.path.insert(0, '../lib')
 sys.path.insert(0, './models')
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 
 import tf_wdf as wdf
 from tf_wdf import tf
@@ -18,44 +16,34 @@ from pathlib import Path
 import json
 import pickle
 
+from diode_config import diode_1n4148_1u1d, \
+    diode_1n4148_1u2d, \
+    diode_1n4148_1u3d, \
+    diode_1n4148_2u2d, \
+    diode_1n4148_2u3d, \
+    diode_1n4148_3u3d
+
 from model_utils import *
-from dataimport import *
+from dataimport import load_diode_data
+
+BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 
 # %%
-n_layers = 4
+n_layers = 2
 layer_size = 8
-diode_name = '1N4148'
+diode = diode_1n4148_1u1d
 training_number = 1
 
-pretrained_model = f'{diode_name}_{n_layers}x{layer_size}_pretrained'
-model_name = f'{diode_name}_{n_layers}x{layer_size}_training_{training_number}'
+pretrained_model = f'{diode.name}_{n_layers}x{layer_size}_pretrained'
+model_name = f'{diode.name}_{n_layers}x{layer_size}_training_{training_number}'
 plots_dir = Path(f'./plots/{model_name}')
 
 assert not plots_dir.exists(), "Plots for this training run have already been created!"
 plots_dir.mkdir()
 
 # %%
-up_num = f"1"
-down_num = f"1"
-
-R_val = 10.0 #in kOhms
-R_val_string = str(R_val)
-C_val = 4.7#in nanoF
-C_val_string = str(C_val) 
-csv_name = f"{R_val_string}k_{C_val_string}nF"
-BASE_DIR = Path(__file__).parent.parent.parent.resolve()
-csv_path = f"{BASE_DIR}/diode_dataset/1N4148/{up_num}up{down_num}down/{csv_name}.csv"
-raw_data = createDataset(csv_path)
-raw_data = raw_data["dataset"]
-
-# %%
-# input = [0], output [1]
-FS = raw_data["FS"]
-start = 0
-N = raw_data["num_samples"]
-x = raw_data[start:start+N, 0].astype(np.float32)
-R_data = np.ones_like(x) * (R_val * 1000)
-y_ref = raw_data[start:start+N, 1].astype(np.float32)
+C_val = 4.7e-9
+N, FS, x, R_data, y_ref = load_diode_data(diode, BASE_DIR)
 
 print(x.shape)
 print(y_ref.shape)
@@ -77,7 +65,7 @@ print(data_in_batched.shape)
 print(data_target.shape)
 print(data_target_batched.shape)
 
-plot_batch = 315
+plot_batch = 100
 # plt.plot(np.log(data_in_batched[plot_batch, :, 1]) - 10)
 plt.plot(data_in_batched[plot_batch, :, 0])
 plt.plot(data_target_batched[plot_batch, :, 0])
@@ -86,15 +74,14 @@ plt.plot(data_target_batched[plot_batch, :, 0])
 class ClipperModel(tf.Module):
     def __init__(self, json):
         super(ClipperModel, self).__init__()
-        self.Vs = wdf.ResistiveVoltageSource(R_val * 1000)
-        self.C = wdf.Capacitor(1e-9 * C_val, FS)
+        self.Vs = wdf.ResistiveVoltageSource(45.0e3)
+        self.C = wdf.Capacitor(C_val, FS)
         self.P1 = wdf.Parallel(self.Vs, self.C)
 
         self.model = DenseRootModel(json)
 
     def forward(self, input):
         sequence_length = input.shape[1]
-        batch_size = input.shape[0]
         input = tf.cast(tf.expand_dims(input, axis=-1), dtype=tf.float32)
         output_sequence = tf.TensorArray(dtype=tf.float32, size=sequence_length, clear_after_read=False)
 
@@ -151,12 +138,10 @@ def bounds_loss(target_y, pred_y):
     return tf.math.abs(target_min - pred_min) + tf.math.abs(target_max - pred_max)
 
 mse_loss = tf.keras.losses.MeanSquaredError()
-# loss_func = lambda target, pred: 0.1 * esr_loss(target, pred) + 10 * mse_loss(target, pred)
 loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred)
 
 # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
 optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
-# optimizer = tf.keras.optimizers.Adagrad(learning_rate=1e-2, initial_accumulator_value=0.1, epsilon=1e-07,name='Adagrad')
 
 # %%
 def plot_target_pred(target, predicted, epoch):
@@ -165,7 +150,7 @@ def plot_target_pred(target, predicted, epoch):
     plt.plot(predicted[:batch_size // 3], '--', label='Predicted')
     plt.xlabel('Time [samples]')
     plt.ylabel('Voltage')
-    plt.title(f'Diode Clipper ({diode_name}, {n_layers}x{layer_size}), Epoch {epoch}')
+    plt.title(f'Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}')
     plt.legend(loc='lower left')
 
     plt.savefig(f'./{plots_dir}/epoch_{epoch}.png')

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import math
+from pathlib import Path
 
 def getSampleRate(df):
     sample_rate_string = df.loc[4]
@@ -17,9 +18,7 @@ def getDatasetSize(df):
     size = float(size)
     return size
 
-
-
-def createDataset(path):
+def createDataset(path, plot = False):
     info_df = pd.read_csv(path, skiprows= lambda x: x >8,header=None)
     Fs = getSampleRate(info_df)
     num_samples = getDatasetSize(info_df)
@@ -33,19 +32,23 @@ def createDataset(path):
     dur_of_data = 12.3 #seconds
     samp_data_end = math.ceil((time_remove_pre + dur_of_data) * Fs)
 
-    #plot cut lines
-    plt.plot(output[:,0])
-    plt.plot(output[:,1])
-    plt.axvline(x=samp_trp, color="r")
-    plt.axvline(x=samp_data_end, color="r")
-    plt.title("Before, red lines are cut lines")
+    if plot:
+        #plot cut lines
+        plt.figure()
+        plt.plot(output[:,0])
+        plt.plot(output[:,1])
+        plt.axvline(x=samp_trp, color="r")
+        plt.axvline(x=samp_data_end, color="r")
+        plt.title("Before, red lines are cut lines")
     
-    plt.figure()
     output = output[samp_trp:samp_data_end,:]
     num_samples = len(output)
-    plt.plot(output[:,0])
-    plt.plot(output[:,1])
-    plt.title("After")
+
+    if plot:
+        plt.figure()
+        plt.plot(output[:,0])
+        plt.plot(output[:,1])
+        plt.title("After")
 
     output_dict = {
         "dataset": output,
@@ -53,10 +56,54 @@ def createDataset(path):
         "num_samples": num_samples
     }
     
-
-
     return output_dict
     
+
+def get_data_path_for_diode(diode, BASE_DIR):
+    path = Path(f'{BASE_DIR}/diode_dataset')
+
+    if '1N4148' in diode.name:
+        path = Path.joinpath(path, '1N4148')
+    elif 'OA1154' in diode.name:
+        path = Path.joinpath(path, 'OA1154')
+    else:
+        assert False, "No data available for this diode!"
+
+    sub_folder = f'{diode.N_up}up{diode.N_down}down'
+    return Path.joinpath(path, sub_folder)
+
+
+def load_diode_data(diode, BASE_DIR, start_offset=0, csv_samples=-1, plot=False):
+    data_path = get_data_path_for_diode(diode, BASE_DIR)
+
+    total_num_samples = 0
+    FS = 0
+    all_data = pd.DataFrame()
+    for csv_path in data_path.iterdir():
+        R_val = float(csv_path.parts[-1].partition('k')[0])
+
+        raw_data = createDataset(csv_path, plot=plot)
+        FS = raw_data["FS"]
+
+        N = raw_data["num_samples"] if csv_samples < 0 else csv_samples
+        total_num_samples += N
+
+        raw_data = raw_data["dataset"]
+        
+        x = raw_data[start_offset : start_offset + N, 0].astype(np.float32)
+        R_data = np.ones_like(x) * (R_val * 1000.0)
+        y_ref = raw_data[start_offset : start_offset + N, 1].astype(np.float32)
+
+        csv_data = np.array([x, R_data, y_ref])
+        csv_data_df = pd.DataFrame(data=csv_data)
+        all_data = pd.concat([all_data, csv_data_df], axis=1)
+
+    all_data_np = all_data.to_numpy()
+    x = all_data_np[0]
+    R_data = all_data_np[1]
+    y_ref = all_data_np[2]
+
+    return total_num_samples, FS, x, R_data, y_ref
 # %%
 # path = "/Users/chris/Desktop/git/differentiable-wdfs/diode_dataset/1N4148/1up1down/10.0k_4.7nF.csv"
 
