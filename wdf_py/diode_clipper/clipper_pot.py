@@ -1,5 +1,7 @@
 # %%
 import sys
+
+from wdf_py.lib.dataimport import createDataset
 sys.path.insert(0, '../lib')
 sys.path.insert(0, './models')
 
@@ -17,6 +19,7 @@ import json
 import pickle
 
 from model_utils import *
+from dataimport import *
 
 # %%
 n_layers = 4
@@ -32,17 +35,26 @@ assert not plots_dir.exists(), "Plots for this training run have already been cr
 plots_dir.mkdir()
 
 # %%
+up_num = f"1"
+down_num = f"1"
+
+R_val = 10.0 #in kOhms
+R_val_string = str(R_val)
+C_val = 4.7#in nanoF
+C_val_string = str(C_val) 
+csv_name = f"{R_val_string}k_{C_val_string}nF"
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
-raw_data = pd.read_csv(f"{BASE_DIR}/diode_dataset/trial_data/47k_2.2nF_1N4148.csv", header=9)
-raw_data = raw_data.to_numpy()
+csv_path = f"{BASE_DIR}/diode_dataset/1N4148/{up_num}up{down_num}down/{csv_name}.csv"
+raw_data = createDataset(csv_path)
+raw_data = raw_data["dataset"]
 
 # %%
 # input = [0], output [1]
-FS = 50000
+FS = raw_data["FS"]
 start = 0
-N = 1452164
+N = raw_data["num_samples"]
 x = raw_data[start:start+N, 0].astype(np.float32)
-R_data = np.ones_like(x) * 47e3
+R_data = np.ones_like(x) * (R_val * 1000)
 y_ref = raw_data[start:start+N, 1].astype(np.float32)
 
 print(x.shape)
@@ -74,8 +86,8 @@ plt.plot(data_target_batched[plot_batch, :, 0])
 class ClipperModel(tf.Module):
     def __init__(self, json):
         super(ClipperModel, self).__init__()
-        self.Vs = wdf.ResistiveVoltageSource(47000.0)
-        self.C = wdf.Capacitor(2.2e-9, FS)
+        self.Vs = wdf.ResistiveVoltageSource(R_val * 1000)
+        self.C = wdf.Capacitor(1e-9 * C_val, FS)
         self.P1 = wdf.Parallel(self.Vs, self.C)
 
         self.model = DenseRootModel(json)
