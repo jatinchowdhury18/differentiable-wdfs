@@ -6,21 +6,22 @@ import numpy as np
 from scipy.special import wrightomega
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from collections import namedtuple
 from model_utils import save_model
+
+from diode_config import diode_1n4148_1u1d, \
+    diode_1n4148_1u2d, \
+    diode_1n4148_1u3d, \
+    diode_1n4148_2u2d, \
+    diode_1n4148_2u3d, \
+    diode_1n4148_3u3d
 
 plots_dir = 'plots/pretraining'
 
 # %%
-n_layers = 4
+n_layers = 2
 layer_size = 8
 
-DiodeConfig = namedtuple('DiodeConfig', ['name', 'Is', 'nabla', 'Vt'], defaults=['', 1.0e-9, 1.0, 25.85e-3])
-
-default_diode = DiodeConfig('DefaultDiode')
-diode_1n4148 = DiodeConfig('1N4148', Is=4.352e-9, nabla=1.906) # borrowed from: https://github.com/neiser/spice-padiwa-amps/blob/master/1N4148.lib
-
-diode_to_train = diode_1n4148
+diode_to_train = diode_1n4148_3u3d
 
 model_name = f'{diode_to_train.name}_{n_layers}x{layer_size}_pretrained'
 
@@ -29,29 +30,25 @@ model_name = f'{diode_to_train.name}_{n_layers}x{layer_size}_pretrained'
 # See Werner et al., "An Improved and Generalized Diode Clipper Model for Wave Digital Filters"
 # https://www.researchgate.net/publication/299514713_An_Improved_and_Generalized_Diode_Clipper_Model_for_Wave_Digital_Filters
 
-# see reference eqn (18)
-def diode_pair_func_good(x, R, diode):
+# see reference eqn (45)
+def diode_pair_func(x, R, diode):
     a = x
-    R_Is = diode.Is * R
-    Vt = diode.Vt * diode.nabla
-    R_Is_overVt = R_Is / Vt
-    logR_Is_overVt = np.log(R_Is_overVt)
-    lamb = np.sign(a)
-    b = a + 2 * lamb * (R_Is - Vt * wrightomega(logR_Is_overVt + lamb * a / Vt + R_Is_overVt))
-    return np.float32(b)
 
-# see reference eqn (39)
-def diode_pair_func_best(x, R, diode):
-    a = x
     R_Is = diode.Is * R
     Vt = diode.Vt * diode.nabla
     R_Is_overVt = R_Is / Vt
-    logR_Is_overVt = np.log(R_Is_overVt)
+
+    mu0 = diode.N_down if a >= 0 else diode.N_up
+    mu1 = diode.N_up if a >= 0 else diode.N_down
+
+    logR_Is_overmu0_Vt = np.log(R_Is_overVt / mu0)
+    logR_Is_overmu1_Vt = np.log(R_Is_overVt / mu1)
     
     lamb = np.sign(a)
-    lamb_a_over_vt = lamb * a / Vt
+    lamb_a_over_mu0_vt = lamb * a / (mu0 * Vt)
+    lamb_a_over_mu1_vt = lamb * a / (mu1 * Vt)
 
-    b = a - 2 * Vt * lamb * (wrightomega(logR_Is_overVt + lamb_a_over_vt) - wrightomega(logR_Is_overVt - lamb_a_over_vt))
+    b = a - 2 * Vt * lamb * (mu0 * wrightomega(logR_Is_overmu0_Vt + lamb_a_over_mu0_vt) - mu1 * wrightomega(logR_Is_overmu1_Vt - lamb_a_over_mu1_vt))
     return np.float32(b)
 
 # %%
@@ -82,15 +79,15 @@ ax1.legend(handles=[a_plot, R_plot])
 
 plt.title('Diode Network Synthetic Training Data')
 
-fig.tight_layout()  # otherwise the right y-label is slightly clipped
-plt.savefig(f'{plots_dir}/diodes_synth_training_data.png')
+# fig.tight_layout()  # otherwise the right y-label is slightly clipped
+# plt.savefig(f'{plots_dir}/diodes_synth_training_data.png')
 
 # %%
 ideal_y = np.zeros_like(test_x[:,0])
 ideal_y2 = np.zeros_like(test_x[:,0])
 for n in range(len(ideal_y)):
     # multiply by -1 to make the data line up better
-    ideal_y[n] = -1 * diode_pair_func_best(*test_x[n], diode_to_train)
+    ideal_y[n] = -1 * diode_pair_func(*test_x[n], diode_to_train)
 
 # use log of impedance instead of impedance!
 test_x[:,1] = np.log(test_x[:,1])
@@ -165,7 +162,7 @@ save_model(diode_model, f'models/pretrained/{model_name}_model.json')
 
 # %%
 # Training Results:
-# 1N4148:
+# 1N4148 (1U-1D):
 # - 2x4:  MSE = 1.34e-3, ESR = 1.23e-3
 # - 2x8:  MSE = 5.51e-5, ESR = 2.49e-4
 # - 2x16: MSE = 7.98e-6, ESR = 9.49e-5
