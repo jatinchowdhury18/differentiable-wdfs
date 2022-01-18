@@ -39,7 +39,7 @@ void DiodeClipper::prepare (double sampleRate, int samplesPerBlock)
 }
 
 template <typename DiodeType, typename VoltageType, typename PType, typename CType>
-void processDiodeClipper (AudioBuffer<float>& buffer, DiodeType& dp, VoltageType Vs, PType P1, CType C)
+void processDiodeClipper (AudioBuffer<float>& buffer, DiodeType& dp, VoltageType& Vs, PType& P1, CType& C)
 {
     auto* x = buffer.getWritePointer (0); // mono only!
     for (int n = 0; n < buffer.getNumSamples(); ++n)
@@ -64,7 +64,6 @@ void DiodeClipper::process (AudioBuffer<float>& buffer)
     Vs.setResistanceValue (resVal);
 
     auto modelChoice = (int) *modelChoiceParam;
-
     if (modelChoice == 0)
     {
         if (prevModelChoice != modelChoice)
@@ -73,6 +72,7 @@ void DiodeClipper::process (AudioBuffer<float>& buffer)
             dp.calcImpedance();
             prevModelChoice = modelChoice;
         }
+
         processDiodeClipper (buffer, dp, Vs, P1, C);
     }
     else if (modelChoice == 1)

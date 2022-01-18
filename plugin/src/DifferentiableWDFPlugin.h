@@ -1,11 +1,16 @@
 #pragma once
 
 #include "dsp/diode_clipper/DiodeClipper.h"
+#include "dsp/tube_screamer/TubeScreamer.h"
 
 namespace DiffWDFParams
 {
 const String diodeClipperPrefix = "diode_clipper_";
-}
+const String tubeScreamerPrefix = "tube_screamer_";
+
+const String circuitChoiceTag = "circuit_choice";
+const StringArray circuitChoices { "Diode Clipper", "Tube Screamer" };
+} // namespace DiffWDFParams
 
 class DifferentiableWDFPlugin : public chowdsp::PluginBase<DifferentiableWDFPlugin>
 {
@@ -24,9 +29,13 @@ public:
     auto& getLoadMeasurer() { return loadMeasurer; }
 
     auto& getDiodeClipper() { return diodeClipper; }
+    auto& getTubeScreamer() { return tubeScreamer; }
 
 private:
+    std::atomic<float>* modelChoiceParam = nullptr;
+
     DiodeClipper diodeClipper;
+    TubeScreamer tubeScreamer;
 
     AudioBuffer<float> monoBuffer;
 
