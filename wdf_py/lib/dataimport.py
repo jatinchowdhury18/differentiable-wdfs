@@ -80,23 +80,25 @@ def load_diode_data(diode, BASE_DIR, start_offset=0, csv_samples=-1, plot=False)
     FS = 0
     all_data = pd.DataFrame()
     for csv_path in data_path.iterdir():
+
         R_val = float(csv_path.parts[-1].partition('k')[0])
+        print(R_val)
+        if R_val < 98:
+            raw_data = createDataset(csv_path, plot=plot)
+            FS = raw_data["FS"]
 
-        raw_data = createDataset(csv_path, plot=plot)
-        FS = raw_data["FS"]
+            N = raw_data["num_samples"] if csv_samples < 0 else csv_samples
+            total_num_samples += N
 
-        N = raw_data["num_samples"] if csv_samples < 0 else csv_samples
-        total_num_samples += N
+            raw_data = raw_data["dataset"]
+            
+            x = raw_data[start_offset : start_offset + N, 0].astype(np.float32)
+            R_data = np.ones_like(x) * (R_val * 1000.0)
+            y_ref = raw_data[start_offset : start_offset + N, 1].astype(np.float32)
 
-        raw_data = raw_data["dataset"]
-        
-        x = raw_data[start_offset : start_offset + N, 0].astype(np.float32)
-        R_data = np.ones_like(x) * (R_val * 1000.0)
-        y_ref = raw_data[start_offset : start_offset + N, 1].astype(np.float32)
-
-        csv_data = np.array([x, R_data, y_ref])
-        csv_data_df = pd.DataFrame(data=csv_data)
-        all_data = pd.concat([all_data, csv_data_df], axis=1)
+            csv_data = np.array([x, R_data, y_ref])
+            csv_data_df = pd.DataFrame(data=csv_data)
+            all_data = pd.concat([all_data, csv_data_df], axis=1)
 
     all_data_np = all_data.to_numpy()
     x = all_data_np[0]
