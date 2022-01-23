@@ -29,7 +29,7 @@ def createDataset(path, plot = False):
     time_remove_pre = 2.5 #seconds
     samp_trp = math.floor(time_remove_pre * Fs)
     
-    dur_of_data = 12.3 #seconds
+    dur_of_data = 14.3 #seconds
     samp_data_end = math.ceil((time_remove_pre + dur_of_data) * Fs)
 
     if plot:
