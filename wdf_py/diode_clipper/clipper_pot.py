@@ -33,8 +33,8 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 # %%
 n_layers = 2
 layer_size = 8
-diode = diode_1n4148_1u1d
-training_number = 1
+diode = diode_1n4148_1u3d
+training_number = 2
 
 pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
 model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -45,32 +45,42 @@ plots_dir.mkdir()
 
 # %%
 C_val = 4.7e-9
-N, FS, x, R_data, y_ref = load_diode_data(diode, BASE_DIR)
+train_data, train_N, val_data, val_N, FS = load_diode_data(diode, BASE_DIR)
 
-print(x.shape)
-print(y_ref.shape)
+print(train_data.shape)
+print(val_data.shape)
 
 # %%
 batch_size = 2048
-n_batches = N // batch_size
 
-data_in = np.stack([x, R_data], axis=0).transpose()
-data_in_trim = data_in[: (n_batches * batch_size), :]
-data_in_batched = np.stack(np.array_split(data_in_trim, n_batches))
+def batch_data(data, N):
+    x = data[0]
+    R_data = data[1]
+    y_ref = data[2]
+    n_batches = N // batch_size
 
-data_target = np.transpose(np.array([y_ref]))
-data_target_trim = data_target[: (n_batches * batch_size), :]
-data_target_batched = np.stack(np.array_split(data_target_trim, n_batches))
+    data_in = np.stack([x, R_data], axis=0).transpose()
+    data_in_trim = data_in[: (n_batches * batch_size), :]
+    data_in_batched = np.stack(np.array_split(data_in_trim, n_batches))
 
-print(data_in.shape)
-print(data_in_batched.shape)
-print(data_target.shape)
-print(data_target_batched.shape)
+    data_target = np.transpose(np.array([y_ref]))
+    data_target_trim = data_target[: (n_batches * batch_size), :]
+    data_target_batched = np.stack(np.array_split(data_target_trim, n_batches))
 
-plot_batch = 416
-# plt.plot(np.log(data_in_batched[plot_batch, :, 1]) - 10)
-plt.plot(data_in_batched[plot_batch, :, 0])
-plt.plot(data_target_batched[plot_batch, :, 0])
+    print(data_in.shape)
+    print(data_in_batched.shape)
+    print(data_target.shape)
+    print(data_target_batched.shape)
+
+    return data_in_batched, data_target_batched
+
+train_X, train_Y = batch_data(train_data, train_N)
+val_X, val_Y = batch_data(val_data, val_N)
+
+# %%
+plot_batch = 330
+plt.plot(val_X[plot_batch, :, 0])
+plt.plot(val_Y[plot_batch, :, 0])
 
 # %%
 class ClipperModel(tf.Module):
@@ -129,6 +139,8 @@ def esr_loss(target_y, predicted_y, emphasis_func=lambda x: x):
     energy = tf.math.reduce_sum(tf.math.square(target_yp))
 
     loss_unnorm = mse / tf.cast(energy + eps, tf.float32)
+
+    N = tf.shape(target_y)[0] * tf.shape(target_y)[1]
     return tf.sqrt(loss_unnorm / N)
 
 
@@ -153,7 +165,7 @@ mse_loss = tf.keras.losses.MeanSquaredError()
 loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred)
 
 # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
-optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+optimizer = tf.keras.optimizers.Adam(learning_rate=5e-4)
 
 # %%
 def plot_target_pred(target, predicted, epoch):
@@ -171,32 +183,43 @@ def plot_target_pred(target, predicted, epoch):
 
 # %%
 skip_samples = 50  # skip the first few samples to let state build up
-history = {"loss": [], "mse": [], "esr": []}
+history = {"loss": [], "mse": [], "esr": [], "val_loss": [], "val_mse": [], "val_esr": []}
 
 # %%
-for epoch in tqdm(range(1001)):
+for epoch in tqdm(range(101)):
     with tf.GradientTape() as tape:
-        outs = tf.transpose(model.forward(data_in_batched)[..., 0], perm=[1, 0, 2])
+        outs = tf.transpose(model.forward(train_X)[..., 0], perm=[1, 0, 2])
         loss = loss_func(
-            outs[:, skip_samples:, :], data_target_batched[:, skip_samples:, :]
+            outs[:, skip_samples:, :], train_Y[:, skip_samples:, :]
         )
 
     history["loss"].append(loss)
     history["mse"].append(
-        mse_loss(outs[:, skip_samples:, :], data_target_batched[:, skip_samples:, :])
+        mse_loss(outs[:, skip_samples:, :], train_Y[:, skip_samples:, :])
     )
     history["esr"].append(
-        esr_loss(outs[:, skip_samples:, :], data_target_batched[:, skip_samples:, :])
+        esr_loss(outs[:, skip_samples:, :], train_Y[:, skip_samples:, :])
+    )
+
+    val_outs = tf.transpose(model.forward(val_X)[..., 0], perm=[1, 0, 2])
+    val_loss = loss_func(val_outs[:, skip_samples:, :], val_Y[:, skip_samples:, :])
+    history["val_loss"].append(val_loss)
+    history["val_mse"].append(
+        mse_loss(val_outs[:, skip_samples:, :], val_Y[:, skip_samples:, :])
+    )
+    history["val_esr"].append(
+        esr_loss(val_outs[:, skip_samples:, :], val_Y[:, skip_samples:, :])
     )
 
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 50 == 0:
+    if epoch % 5 == 0:
         print(f"\nCheckpoint (Epoch = {epoch}):")
         print(f"    Loss: {loss}")
-        target = data_target_batched[plot_batch, skip_samples:, 0]
-        pred = outs[plot_batch, skip_samples:, 0]
+        print(f"    Val Loss: {val_loss}")
+        target = val_X[plot_batch, skip_samples:, 0]
+        pred = val_outs[plot_batch, skip_samples:, 0]
         plot_target_pred(target, pred, epoch)
 
 print(f"\nFinal Results:")
@@ -205,11 +228,11 @@ with open(f"./histories/{model_name}_history.pkl", "wb") as f:
     pickle.dump(history, f)
 
 # %%
-outs = tf.transpose(model.forward(data_in_batched)[..., 0], perm=[1, 0, 2])
+val_outs = tf.transpose(model.forward(val_X)[..., 0], perm=[1, 0, 2])
 
 # %%
-target = data_target_batched[plot_batch, skip_samples:, 0]
-pred = outs[plot_batch, skip_samples:, 0]
+target = val_Y[plot_batch, skip_samples:, 0]
+pred = val_outs[plot_batch, skip_samples:, 0]
 plot_target_pred(target, pred, "final")
 # plt.ylim(-0.2, 0.2)
 # plt.xlim(11150, 11900)
