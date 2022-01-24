@@ -32,18 +32,23 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 learning_rates_dict = {
     "learning_rate": [1e-4, 1e-3, 1e-2],
     "training_number": [1, 2, 3],
+    "epochs": [1001, 501, 501],
 }
 
 training_dict = {
     "n_layers": [2, 2, 2, 4, 4],
-    "layer_size": [4, 8, 16, 4, 4],
+    "layer_size": [4, 8, 16, 4, 8],
 }
 
 for train_num in range(3):
     for num in range(5):
+        if train_num < 1:
+            if num < 4:
+                continue
 
         n_layers = training_dict["n_layers"][num]
         layer_size = training_dict["layer_size"][num]
+        print([n_layers, layer_size])
         diode = diode_1n4148_1u1d
         training_number = learning_rates_dict["training_number"][train_num]
 
@@ -125,7 +130,7 @@ for train_num in range(3):
             f"./models/pretrained/{pretrained_model}_model.json", "r"
         ) as read_file:
             model_json = json.load(read_file)
-        print(model_json)
+        # print(model_json)
         model = ClipperModel(model_json)
 
         def pre_emphasis_filter(x, coeff=0.85):
@@ -188,7 +193,7 @@ for train_num in range(3):
         print(data_target.shape)
         print(data_target_batched.shape)
 
-        for epoch in tqdm(range(200)):
+        for epoch in tqdm(range(learning_rates_dict["epochs"][train_num])):
             with tf.GradientTape() as tape:
                 outs = tf.transpose(
                     model.forward(data_in_batched)[..., 0], perm=[1, 0, 2]
