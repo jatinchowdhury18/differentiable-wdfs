@@ -76,20 +76,22 @@ def get_data_path_for_diode(diode, BASE_DIR):
 def load_diode_data(diode, BASE_DIR, start_offset=0, csv_samples=-1, plot=False):
     data_path = get_data_path_for_diode(diode, BASE_DIR)
 
-    total_num_samples = 0
+    train_num_samples = 0
+    val_num_samples = 0
     FS = 0
-    all_data = pd.DataFrame()
+    train_data = pd.DataFrame()
+    val_data = pd.DataFrame()
     for csv_path in data_path.iterdir():
 
         R_val = float(csv_path.parts[-1].partition('k')[0])
         
-        if R_val > 73:
+        if R_val < 30 or R_val > 73:
             print(R_val)
             raw_data = createDataset(csv_path, plot=plot)
             FS = raw_data["FS"]
 
             N = raw_data["num_samples"] if csv_samples < 0 else csv_samples
-            total_num_samples += N
+            train_num_samples += N
 
             raw_data = raw_data["dataset"]
             
@@ -99,15 +101,15 @@ def load_diode_data(diode, BASE_DIR, start_offset=0, csv_samples=-1, plot=False)
 
             csv_data = np.array([x, R_data, y_ref])
             csv_data_df = pd.DataFrame(data=csv_data)
-            all_data = pd.concat([all_data, csv_data_df], axis=1)
+            train_data = pd.concat([train_data, csv_data_df], axis=1)
 
-        if R_val < 30:
-            print(R_val)
+        else:
+            print(str(R_val) + "(validation!)")
             raw_data = createDataset(csv_path, plot=plot)
             FS = raw_data["FS"]
 
             N = raw_data["num_samples"] if csv_samples < 0 else csv_samples
-            total_num_samples += N
+            val_num_samples += N
 
             raw_data = raw_data["dataset"]
             
@@ -117,14 +119,14 @@ def load_diode_data(diode, BASE_DIR, start_offset=0, csv_samples=-1, plot=False)
 
             csv_data = np.array([x, R_data, y_ref])
             csv_data_df = pd.DataFrame(data=csv_data)
-            all_data = pd.concat([all_data, csv_data_df], axis=1)
+            val_data = pd.concat([val_data, csv_data_df], axis=1)
 
-    all_data_np = all_data.to_numpy()
-    x = all_data_np[0]
-    R_data = all_data_np[1]
-    y_ref = all_data_np[2]
 
-    return total_num_samples, FS, x, R_data, y_ref
+    train_data_np = train_data.to_numpy()
+    val_data_np = val_data.to_numpy()
+
+    return train_data_np, train_num_samples, val_data_np, val_num_samples, FS
+
 # %%
 # path = "/Users/chris/Desktop/git/differentiable-wdfs/diode_dataset/1N4148/1up1down/10.0k_4.7nF.csv"
 
