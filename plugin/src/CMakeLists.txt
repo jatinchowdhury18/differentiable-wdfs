@@ -2,6 +2,7 @@ target_sources(DifferentiableWDFs PRIVATE
     DifferentiableWDFPlugin.cpp
 
     dsp/diode_clipper/DiodeClipper.cpp
+    dsp/diode_clipper/DiodeClipperWDF.cpp
     dsp/tube_screamer/TubeScreamer.cpp
 
     gui/CircuitModelGUI.cpp
