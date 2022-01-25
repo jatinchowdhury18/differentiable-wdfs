@@ -31,6 +31,9 @@ class ResistiveVoltageSource(tf.Module):
     def calc_impedance(self):
         pass
 
+    def reset(self):
+        self.a = tf.zeros(1)
+
     def set_voltage(self, voltage):
         self.Vs = voltage
     
@@ -80,7 +83,7 @@ class Capacitor(tf.Module):
         self.R = tf.math.reciprocal(self.C * (2.0 * self.FS))
 
     def reset(self):
-        self.z = tf.zeros_like(self.z)
+        self.z = tf.zeros(1)
 
     def incident(self, x):
         self.a = x

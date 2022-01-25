@@ -35,7 +35,7 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 n_layers = 2
 layer_size = 8
 diode = diode_1n4148_2u2d
-training_number = 1
+training_number = 2
 
 pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
 model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -102,6 +102,7 @@ class ClipperModel(tf.Module):
             dtype=tf.float32, size=sequence_length, clear_after_read=False
         )
 
+        self.Vs.reset()
         self.C.reset()
 
         for i in range(sequence_length):
@@ -143,7 +144,6 @@ def esr_loss(target_y, predicted_y, emphasis_func=lambda x: x):
 
     loss_unnorm = mse / tf.cast(energy + eps, tf.float32)
     N = tf.cast((tf.shape(target_y)[0] * tf.shape(target_y)[1]), tf.float32)
-    # print(type(N))
     return tf.sqrt(loss_unnorm / N)
 
 
@@ -171,6 +171,20 @@ loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred)
 optimizer = tf.keras.optimizers.Adam(learning_rate=5e-4)
 
 # %%
+# def plot_target_pred(target, predicted, epoch):
+#     plt.figure()
+#     plt.plot(target[:batch_size], label="Target")
+#     plt.plot(predicted[:batch_size], "--", label="Predicted")
+    
+#     plt.xlabel("Time [samples]")
+#     plt.ylabel("Voltage")
+
+#     plt.title(f"Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}")
+#     plt.legend(loc="lower left")
+
+#     plt.savefig(f"./{plots_dir}/epoch_{epoch}.png")
+#     plt.close()
+
 def plot_target_pred(target, predicted, val_target, val_predicted, epoch):
     fig, axs = plt.subplots(2, 1)
     plt.figure()
@@ -190,7 +204,6 @@ def plot_target_pred(target, predicted, val_target, val_predicted, epoch):
     plt.savefig(f"./{plots_dir}/epoch_{epoch}.png")
     plt.close()
 
-
 # %%
 skip_samples = 50  # skip the first few samples to let state build up
 history = {
@@ -201,23 +214,6 @@ history = {
     "val_mse": [],
     "val_esr": [],
 }
-
-
-def expandShape(array, shape_in, shape_out):
-    curr_shape = shape_in[0]
-    out_shape = shape_out[0]
-    shape_delta = out_shape - curr_shape
-    num_of_times_bigger = np.floor(shape_delta / curr_shape)
-    array2 = array.copy()
-
-    for i in range(int(num_of_times_bigger)):
-        array = np.concatenate((array, array2), axis=0, dtype=np.float32)
-
-    remainder_check = shape_delta - (num_of_times_bigger * curr_shape)
-    if remainder_check > 0:
-        remainder_array = array[0:remainder_check, :, :]
-        array = np.concatenate((array, remainder_array), axis=0, dtype=np.float32)
-    return array
 
 
 # %%
@@ -233,9 +229,6 @@ for epoch in tqdm(range(101)):
     history["esr"].append(
         esr_loss(outs[:, skip_samples:, :], train_Y[:, skip_samples:, :])
     )
-
-    val_X = expandShape(val_X, val_X.shape, train_X.shape)
-    val_Y = expandShape(val_Y, val_Y.shape, train_Y.shape)
 
     val_outs = tf.transpose(model.forward(val_X)[..., 0], perm=[1, 0, 2])
     val_loss = loss_func(val_outs[:, skip_samples:, :], val_Y[:, skip_samples:, :])
@@ -258,6 +251,7 @@ for epoch in tqdm(range(101)):
         train_pred = outs[plot_batch, skip_samples:, 0]
         val_target = val_Y[plot_batch, skip_samples:, 0]
         val_pred = val_outs[plot_batch, skip_samples:, 0]
+        # plot_target_pred(val_target, val_pred, epoch)
         plot_target_pred(train_target, train_pred, val_target, val_pred, epoch)
 
 print(f"\nFinal Results:")
