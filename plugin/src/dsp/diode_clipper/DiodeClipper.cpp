@@ -35,21 +35,7 @@ void DiodeClipper::prepare (double sampleRate, int samplesPerBlock)
     inputGain.prepare ({ sampleRate, (uint32) samplesPerBlock, 1 });
     inputGain.setRampDurationSeconds (0.02);
 
-    C.prepare ((float) sampleRate);
-}
-
-template <typename DiodeType, typename VoltageType, typename PType, typename CType>
-void processDiodeClipper (AudioBuffer<float>& buffer, DiodeType& dp, VoltageType& Vs, PType& P1, CType& C)
-{
-    auto* x = buffer.getWritePointer (0); // mono only!
-    for (int n = 0; n < buffer.getNumSamples(); ++n)
-    {
-        Vs.setVoltage (x[n]);
-
-        dp.incident (P1.reflected());
-        x[n] = wdft::voltage<float> (C);
-        P1.incident (dp.reflected());
-    }
+    wdf.prepare (sampleRate);
 }
 
 void DiodeClipper::process (AudioBuffer<float>& buffer)
@@ -59,42 +45,6 @@ void DiodeClipper::process (AudioBuffer<float>& buffer)
     dsp::AudioBlock<float> block { buffer };
     inputGain.process (dsp::ProcessContextReplacing<float> { block });
 
-    // set cutoff frequency
-    const auto resVal = 1.0f / (MathConstants<float>::twoPi * *cutoffHzParam * capVal);
-    Vs.setResistanceValue (resVal);
-
-    auto modelChoice = (int) *modelChoiceParam;
-    if (modelChoice == 0) // TOMS Diode Pair
-    {
-        if (prevModelChoice != modelChoice)
-        {
-            P1.connectToParent (&dpToms);
-            dpToms.calcImpedance();
-            prevModelChoice = modelChoice;
-        }
-
-        processDiodeClipper (buffer, dpToms, Vs, P1, C);
-    }
-    else if (modelChoice == 1) // D'Angelo Wright Omega Diode Pair
-    {
-        if (prevModelChoice != modelChoice)
-        {
-            P1.connectToParent (&dpApprox);
-            dpApprox.calcImpedance();
-            prevModelChoice = modelChoice;
-        }
-
-        processDiodeClipper (buffer, dpApprox, Vs, P1, C);
-    }
-    else if (modelChoice == 2) // Neural nets...
-    {
-        if (prevModelChoice != modelChoice)
-        {
-            P1.connectToParent (&dp4x8Model);
-            dp4x8Model.calcImpedance();
-            prevModelChoice = modelChoice;
-        }
-
-        processDiodeClipper (buffer, dp4x8Model, Vs, P1, C);
-    }
+    wdf.setParameters (*cutoffHzParam, (int) *modelChoiceParam);
+    wdf.process (buffer);
 }

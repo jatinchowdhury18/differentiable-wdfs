@@ -28,7 +28,13 @@ target_compile_definitions(DifferentiableWDFs PUBLIC
     JUCE_VST3_CAN_REPLACE_VST2=0
 )
 
-target_link_libraries(DifferentiableWDFs PRIVATE
+target_link_libraries(DifferentiableWDFs PUBLIC
     juce_plugin_modules
     ModelData
 )
+
+option(DIFFWDFS_ENABLE_BENCHMARKS "Enable benchmarks for plugin" OFF)
+if(DIFFWDFS_ENABLE_BENCHMARKS)
+    message(STATUS "Configuring benchmarks...")
+    add_subdirectory(bench)
+endif()
