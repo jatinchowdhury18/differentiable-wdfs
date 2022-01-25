@@ -4,12 +4,13 @@ subproject_version(JUCE juce_version)
 message(STATUS "VERSION for JUCE: ${juce_version}")
 
 # add custom JUCE modules
-#juce_add_modules(foleys_gui_magic)
 add_subdirectory(chowdsp_utils)
 
 # add RTNeural
 set(RTNEURAL_XSIMD ON CACHE BOOL "Use RTNeural with XSIMD backend" FORCE)
 add_subdirectory(RTNeural)
+
+add_subdirectory(toms917)
 
 include(cmake/WarningFlags.cmake)
 add_library(juce_plugin_modules STATIC)
@@ -22,8 +23,8 @@ target_link_libraries(juce_plugin_modules
         chowdsp_dsp
         chowdsp_gui
         chowdsp_plugin_utils
-#        foleys_gui_magic
         RTNeural
+        toms917
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
@@ -43,8 +44,6 @@ target_compile_definitions(juce_plugin_modules
         JucePlugin_VersionString="${CMAKE_PROJECT_VERSION}"
         JucePlugin_Name="${CMAKE_PROJECT_NAME}"
         JUCE_MODAL_LOOPS_PERMITTED=1
-#        FOLEYS_SHOW_GUI_EDITOR_PALLETTE=0
-#        FOLEYS_ENABLE_BINARY_DATA=1
     INTERFACE
         $<TARGET_PROPERTY:juce_plugin_modules,COMPILE_DEFINITIONS>
 )
@@ -56,6 +55,7 @@ target_include_directories(juce_plugin_modules
         ${CMAKE_SOURCE_DIR}/modules/RTNeural
         ${CMAKE_SOURCE_DIR}/modules/RTNeural/modules/Eigen
         ${CMAKE_SOURCE_DIR}/modules/RTNeural/modules/xsimd/include
+        ${CMAKE_SOURCE_DIR}/modules/toms917
 )
 
 set_target_properties(juce_plugin_modules PROPERTIES

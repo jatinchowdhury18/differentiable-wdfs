@@ -26,7 +26,7 @@ void DiodeClipper::addParameters (chowdsp::Parameters& params, const String& pre
     cutoffRange.setSkewForCentre (2000.0f);
     emplace_param<VTSParam> (params, prefix + cutoffTag, "Cutoff", String(), cutoffRange, 4000.0f, &freqValToString, &stringToFreqVal);
 
-    StringArray modelChoices { "1N4148 Ideal", "1N4148 4x8" };
+    StringArray modelChoices { "1N4148 Ideal", "1N4148 Approx", "1N4148 4x8" };
     emplace_param<AudioParameterChoice> (params, prefix + modelTag, "Model", modelChoices, 0);
 }
 
@@ -64,18 +64,29 @@ void DiodeClipper::process (AudioBuffer<float>& buffer)
     Vs.setResistanceValue (resVal);
 
     auto modelChoice = (int) *modelChoiceParam;
-    if (modelChoice == 0)
+    if (modelChoice == 0) // TOMS Diode Pair
     {
         if (prevModelChoice != modelChoice)
         {
-            P1.connectToParent (&dp);
-            dp.calcImpedance();
+            P1.connectToParent (&dpToms);
+            dpToms.calcImpedance();
             prevModelChoice = modelChoice;
         }
 
-        processDiodeClipper (buffer, dp, Vs, P1, C);
+        processDiodeClipper (buffer, dpToms, Vs, P1, C);
     }
-    else if (modelChoice == 1)
+    else if (modelChoice == 1) // D'Angelo Wright Omega Diode Pair
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dpApprox);
+            dpApprox.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dpApprox, Vs, P1, C);
+    }
+    else if (modelChoice == 2) // Neural nets...
     {
         if (prevModelChoice != modelChoice)
         {
