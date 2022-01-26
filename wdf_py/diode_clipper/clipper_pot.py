@@ -33,8 +33,8 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 # %%
 n_layers = 2
 layer_size = 8
-diode = diode_1n4148_1u3d
-training_number = 3
+diode = diode_1n4148_1u2d
+training_number = 1
 
 pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
 model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
