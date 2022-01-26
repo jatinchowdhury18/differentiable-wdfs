@@ -1,6 +1,5 @@
 # %%
 import sys
-from black import out
 
 sys.path.insert(0, "../lib")
 sys.path.insert(0, "./models")
@@ -187,21 +186,32 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=5e-4)
 
 def plot_target_pred(target, predicted, val_target, val_predicted, epoch):
     fig, axs = plt.subplots(2, 1)
-    plt.figure()
+    # plt.figure()
     axs[0].plot(target[:batch_size], label="Target")
     axs[0].plot(predicted[:batch_size], "--", label="Predicted")
     axs[0].set_xlabel("Time [samples]")
     axs[0].set_ylabel("Voltage")
+    axs[0].grid(True)
+    axs[0].legend(loc="lower left")
+    axs[0].set_title("Training",loc="left")
+
 
     axs[1].plot(val_target[:batch_size], label="Target")
     axs[1].plot(val_predicted[:batch_size], "--", label="Predicted")
     axs[1].set_xlabel("Time [samples]")
     axs[1].set_ylabel("Voltage")
-    plt.title(f"Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}")
-    plt.legend(loc="lower left")
+    axs[1].grid(True)
+    axs[1].legend(loc="lower left")
+    axs[1].set_title("Validation", loc="left")
     fig.tight_layout()
 
-    plt.savefig(f"./{plots_dir}/epoch_{epoch}.png")
+
+    fig.suptitle(f"Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}")
+    fig.set_size_inches(7.5, 5)
+    fig.subplots_adjust(wspace=0, hspace=0.4)
+    plt.show()
+
+    fig.savefig(f"./{plots_dir}/epoch_{epoch}.png")
     plt.close()
 
 # %%
