@@ -14,3 +14,4 @@ wdf_py/*_model
 # other extras
 .DS_Store
 *.pkl
+wdf_py/diode_clipper/plots/
