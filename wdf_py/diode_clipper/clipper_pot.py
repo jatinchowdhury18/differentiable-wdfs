@@ -33,8 +33,8 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 # %%
 n_layers = 2
 layer_size = 8
-diode = diode_1n4148_2u2d
-training_number = 2
+diode = diode_1n4148_1u3d
+training_number = 3
 
 pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
 model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -80,7 +80,7 @@ train_X, train_Y = batch_data(train_data, train_N)
 val_X, val_Y = batch_data(val_data, val_N)
 
 # %%
-plot_batch = 330
+plot_batch = 336
 plt.plot(val_X[plot_batch, :, 0])
 plt.plot(val_Y[plot_batch, :, 0])
 
@@ -125,6 +125,8 @@ class ClipperModel(tf.Module):
 with open(f"./models/pretrained/{pretrained_model}_model.json", "r") as read_file:
     model_json = json.load(read_file)
 
+policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')
+tf.keras.mixed_precision.experimental.set_policy(policy) 
 model = ClipperModel(model_json)
 
 # %%
@@ -167,22 +169,22 @@ mse_loss = tf.keras.losses.MeanSquaredError()
 loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred)
 
 # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
-optimizer = tf.keras.optimizers.Adam(learning_rate=5e-4)
+optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5, beta_2=0.999)
 
 # %%
-# def plot_target_pred(target, predicted, epoch):
-#     plt.figure()
-#     plt.plot(target[:batch_size], label="Target")
-#     plt.plot(predicted[:batch_size], "--", label="Predicted")
+def plot_target_pred_val(target, predicted, epoch):
+    plt.figure()
+    plt.plot(target[:batch_size], label="Target")
+    plt.plot(predicted[:batch_size], "--", label="Predicted")
     
-#     plt.xlabel("Time [samples]")
-#     plt.ylabel("Voltage")
+    plt.xlabel("Time [samples]")
+    plt.ylabel("Voltage")
 
-#     plt.title(f"Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}")
-#     plt.legend(loc="lower left")
+    plt.title(f"Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}")
+    plt.legend(loc="lower left")
 
-#     plt.savefig(f"./{plots_dir}/epoch_{epoch}.png")
-#     plt.close()
+    plt.savefig(f"./{plots_dir}/epoch_{epoch}.png")
+    plt.close()
 
 def plot_target_pred(target, predicted, val_target, val_predicted, epoch):
     fig, axs = plt.subplots(2, 1)
@@ -261,7 +263,6 @@ for epoch in tqdm(range(101)):
         train_pred = outs[plot_batch, skip_samples:, 0]
         val_target = val_Y[plot_batch, skip_samples:, 0]
         val_pred = val_outs[plot_batch, skip_samples:, 0]
-        # plot_target_pred(val_target, val_pred, epoch)
         plot_target_pred(train_target, train_pred, val_target, val_pred, epoch)
 
 print(f"\nFinal Results:")
@@ -275,7 +276,7 @@ val_outs = tf.transpose(model.forward(val_X)[..., 0], perm=[1, 0, 2])
 # %%
 target = val_Y[plot_batch, skip_samples:, 0]
 pred = val_outs[plot_batch, skip_samples:, 0]
-plot_target_pred(target, pred, "final")
+plot_target_pred_val(target, pred, "final")
 # plt.ylim(-0.2, 0.2)
 # plt.xlim(11150, 11900)
 
