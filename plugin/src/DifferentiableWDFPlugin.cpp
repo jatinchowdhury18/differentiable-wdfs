@@ -42,7 +42,7 @@ void DifferentiableWDFPlugin::processAudioBlock (AudioBuffer<float>& buffer)
     AudioProcessLoadMeasurer::ScopedTimer loadTimer { loadMeasurer, numSamples };
 
     // for testing with just channel 1 input
-    buffer.copyFrom (0, 0, buffer, 1, 0, numSamples);
+    //    buffer.copyFrom (0, 0, buffer, 1, 0, numSamples);
 
     // sum input to mono
     if (numChannels == 1)
