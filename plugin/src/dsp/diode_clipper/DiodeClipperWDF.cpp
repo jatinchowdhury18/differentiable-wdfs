@@ -57,6 +57,50 @@ void DiodeClipperWDF::process (AudioBuffer<float>& buffer)
     {
         if (prevModelChoice != modelChoice)
         {
+            P1.connectToParent (&dp2x4Model);
+            dp2x4Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp2x4Model, Vs, P1, C);
+    }
+    else if (modelChoice == 3)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp2x8Model);
+            dp2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 4)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp2x16Model);
+            dp2x16Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp2x16Model, Vs, P1, C);
+    }
+    else if (modelChoice == 5)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp4x4Model);
+            dp4x4Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp4x4Model, Vs, P1, C);
+    }
+    else if (modelChoice == 6)
+    {
+        if (prevModelChoice != modelChoice)
+        {
             P1.connectToParent (&dp4x8Model);
             dp4x8Model.calcImpedance();
             prevModelChoice = modelChoice;

@@ -26,7 +26,7 @@ void DiodeClipper::addParameters (chowdsp::Parameters& params, const String& pre
     cutoffRange.setSkewForCentre (2000.0f);
     emplace_param<VTSParam> (params, prefix + cutoffTag, "Cutoff", String(), cutoffRange, 4000.0f, &freqValToString, &stringToFreqVal);
 
-    StringArray modelChoices { "1N4148 Ideal", "1N4148 Approx", "1N4148 4x8" };
+    StringArray modelChoices { "1N4148 Ideal", "1N4148 Approx", "1N4148 2x4", "1N4148 2x8", "1N4148 2x16", "1N4148 4x4", "1N4148 4x8" };
     emplace_param<AudioParameterChoice> (params, prefix + modelTag, "Model", modelChoices, 0);
 }
 
