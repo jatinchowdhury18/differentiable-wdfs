@@ -37,14 +37,20 @@ learning_rates_dict = {
     
 }
 
-for learning_rates_num in range(18):
-    if learning_rates_num < 17:
-        continue
+network_dict = {
+    "n_layer" : [2,2,2,4,4],
+    "layer_size" : [4,8,16,4,8],
+}
 
-    n_layers = 2
-    layer_size = 8
-    diode = diode_1n4148_2u2d
-    training_number = learning_rates_num+1
+
+for train_num in range(18):
+    # if learning_rates_num < 17:
+    #     continue
+
+    n_layers = network_dict["n_layer"][train_num]
+    layer_size = network_dict["layer_size"][train_num]
+    diode = diode_1n4148_1u1d
+    training_number = train_num+1
 
     pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
     model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -180,7 +186,7 @@ for learning_rates_num in range(18):
 
 
     # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
-    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rates_dict["learning_rate"][learning_rates_num], beta_1=learning_rates_dict["beta1"][learning_rates_num], beta_2=learning_rates_dict["beta2"][learning_rates_num])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4, beta_1=0.5, beta_2=0.999)
     optimizer = tf.keras.mixed_precision.LossScaleOptimizer(optimizer)
     
     # def plot_target_pred(target, predicted, epoch):
