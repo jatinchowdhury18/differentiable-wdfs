@@ -4,6 +4,7 @@
 using namespace DiffWDFParams;
 
 DifferentiableWDFPlugin::DifferentiableWDFPlugin() : diodeClipper (diodeClipperPrefix, vts),
+                                                     multiDiodeClipper (multiDiodeClipperPrefix, vts),
                                                      tubeScreamer (tubeScreamerPrefix, vts)
 {
     modelChoiceParam = vts.getRawParameterValue (circuitChoiceTag);
@@ -12,6 +13,7 @@ DifferentiableWDFPlugin::DifferentiableWDFPlugin() : diodeClipper (diodeClipperP
 void DifferentiableWDFPlugin::addParameters (Parameters& params)
 {
     DiodeClipper::addParameters (params, diodeClipperPrefix);
+    MultiDiodeClipper::addParameters (params, multiDiodeClipperPrefix);
     TubeScreamer::addParameters (params, tubeScreamerPrefix);
 
     chowdsp::ParamUtils::emplace_param<AudioParameterChoice> (params, circuitChoiceTag, "Circuit", circuitChoices, 0);
@@ -20,6 +22,7 @@ void DifferentiableWDFPlugin::addParameters (Parameters& params)
 void DifferentiableWDFPlugin::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     diodeClipper.prepare (sampleRate, samplesPerBlock);
+    multiDiodeClipper.prepare (sampleRate, samplesPerBlock);
     tubeScreamer.prepare (sampleRate, samplesPerBlock);
 
     monoBuffer.setSize (1, samplesPerBlock);
@@ -62,6 +65,8 @@ void DifferentiableWDFPlugin::processAudioBlock (AudioBuffer<float>& buffer)
     if (circuitChoice == 0)
         diodeClipper.process (monoBuffer);
     else if (circuitChoice == 1)
+        multiDiodeClipper.process (monoBuffer);
+    else if (circuitChoice == 2)
         tubeScreamer.process (monoBuffer);
     else
         jassertfalse; // unknown circuit!

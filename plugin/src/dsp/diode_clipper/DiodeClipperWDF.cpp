@@ -108,4 +108,59 @@ void DiodeClipperWDF::process (AudioBuffer<float>& buffer)
 
         processDiodeClipper (buffer, dp4x8Model, Vs, P1, C);
     }
+    else if (modelChoice == 7) // multi-diode configs
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_1u2d_2x8Model);
+            dp_1u2d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_1u2d_2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 8)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_2u2d_2x8Model);
+            dp_2u2d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_2u2d_2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 9)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_1u3d_2x8Model);
+            dp_1u3d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_1u3d_2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 10)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_2u3d_2x8Model);
+            dp_2u3d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_2u3d_2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 11)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_3u3d_2x8Model);
+            dp_3u3d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_3u3d_2x8Model, Vs, P1, C);
+    }
 }

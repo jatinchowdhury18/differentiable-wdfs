@@ -3,6 +3,7 @@ target_sources(DifferentiableWDFs PRIVATE
 
     dsp/diode_clipper/DiodeClipper.cpp
     dsp/diode_clipper/DiodeClipperWDF.cpp
+    dsp/diode_clipper/MultiDiodeClipper.cpp
     dsp/tube_screamer/TubeScreamer.cpp
 
     gui/CircuitModelGUI.cpp
@@ -20,6 +21,12 @@ juce_add_binary_data(ModelData
         "../../wdf_py/diode_clipper/models/1N4148 (1U-1D)_2x16_training_3.json"
         "../../wdf_py/diode_clipper/models/1N4148 (1U-1D)_4x4_training_4.json"
         "../../wdf_py/diode_clipper/models/1N4148 (1U-1D)_4x8_training_5.json"
+
+        "../../wdf_py/diode_clipper/models/1N4148 (1U-2D)_2x8_training_1.json"
+        "../../wdf_py/diode_clipper/models/1N4148 (2U-2D)_2x8_training_final.json"
+        "../../wdf_py/diode_clipper/models/1N4148 (1U-3D)_2x8_training_3.json"
+        "../../wdf_py/diode_clipper/models/1N4148 (2U-3D)_2x8_training_2.json"
+        "../../wdf_py/diode_clipper/models/1N4148 (3U-3D)_2x8_training_2.json"
 )
 
 # Need to build BinaryData with -fPIC flag on Linux
