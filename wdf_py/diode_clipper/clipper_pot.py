@@ -32,9 +32,9 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 
 # %%
 n_layers = 2
-layer_size = 8
-diode = diode_1n4148_1u2d
-training_number = 1
+layer_size = 16
+diode = diode_1n4148_1u1d
+training_number = 10
 
 pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
 model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -229,7 +229,7 @@ history = {
 
 
 # %%
-for epoch in tqdm(range(101)):
+for epoch in tqdm(range(501)):
     with tf.GradientTape() as tape:
         outs = tf.transpose(model.forward(train_X)[..., 0], perm=[1, 0, 2])
         loss = loss_func(outs[:, skip_samples:, :], train_Y[:, skip_samples:, :])

@@ -28,6 +28,10 @@ from diode_config import (
 from model_utils import *
 from dataimport import load_diode_data
 
+#EXPERIMENTAL
+import librosa 
+
+
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 
 learning_rates_dict = {
@@ -38,19 +42,19 @@ learning_rates_dict = {
 }
 
 network_dict = {
-    "n_layer" : [2,2,2,4,4],
-    "layer_size" : [4,8,16,4,8],
+    "n_layer" : [2,4],
+    "layer_size" : [16,8],
 }
 
 
-for train_num in range(18):
+for train_num in range(2):
     # if learning_rates_num < 17:
     #     continue
 
     n_layers = network_dict["n_layer"][train_num]
     layer_size = network_dict["layer_size"][train_num]
     diode = diode_1n4148_1u1d
-    training_number = train_num+1
+    training_number = train_num+8
 
     pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
     model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -180,9 +184,18 @@ for train_num in range(18):
         pred_max = tf.math.reduce_max(pred_y)
         return tf.math.abs(target_min - pred_min) + tf.math.abs(target_max - pred_max)
 
+    def fft_loss(target_y, pred_y):
+        target_fft = librosa.stft(np.array((np.reshape(target_y,(target_y.shape[0]*target_y.shape[1])))), n_fft=len(np.reshape(target_y,(target_y.shape[0]*target_y.shape[1]))))
+        pred_fft = librosa.stft(np.array(np.reshape(pred_y,(pred_y.shape[0]*pred_y.shape[1]))), n_fft=len(np.reshape(pred_y,(pred_y.shape[0]*pred_y.shape[1]))))
+        loss_amt = np.abs(target_fft-pred_fft)
+        loss_amt = tf.math.reduce_sum(loss_amt)
+        N = tf.cast((tf.shape(target_y)[0] * tf.shape(target_y)[1]), tf.float32)
+
+        return loss_amt/N
+
 
     mse_loss = tf.keras.losses.MeanSquaredError()
-    loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred)
+    loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred) #+ fft_loss(target,pred)
 
 
     # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
