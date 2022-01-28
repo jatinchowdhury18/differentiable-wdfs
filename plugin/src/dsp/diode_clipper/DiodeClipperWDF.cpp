@@ -57,11 +57,110 @@ void DiodeClipperWDF::process (AudioBuffer<float>& buffer)
     {
         if (prevModelChoice != modelChoice)
         {
+            P1.connectToParent (&dp2x4Model);
+            dp2x4Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp2x4Model, Vs, P1, C);
+    }
+    else if (modelChoice == 3)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp2x8Model);
+            dp2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 4)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp2x16Model);
+            dp2x16Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp2x16Model, Vs, P1, C);
+    }
+    else if (modelChoice == 5)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp4x4Model);
+            dp4x4Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp4x4Model, Vs, P1, C);
+    }
+    else if (modelChoice == 6)
+    {
+        if (prevModelChoice != modelChoice)
+        {
             P1.connectToParent (&dp4x8Model);
             dp4x8Model.calcImpedance();
             prevModelChoice = modelChoice;
         }
 
         processDiodeClipper (buffer, dp4x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 7) // multi-diode configs
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_1u2d_2x8Model);
+            dp_1u2d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_1u2d_2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 8)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_2u2d_2x8Model);
+            dp_2u2d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_2u2d_2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 9)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_1u3d_2x8Model);
+            dp_1u3d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_1u3d_2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 10)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_2u3d_2x8Model);
+            dp_2u3d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_2u3d_2x8Model, Vs, P1, C);
+    }
+    else if (modelChoice == 11)
+    {
+        if (prevModelChoice != modelChoice)
+        {
+            P1.connectToParent (&dp_3u3d_2x8Model);
+            dp_3u3d_2x8Model.calcImpedance();
+            prevModelChoice = modelChoice;
+        }
+
+        processDiodeClipper (buffer, dp_3u3d_2x8Model, Vs, P1, C);
     }
 }

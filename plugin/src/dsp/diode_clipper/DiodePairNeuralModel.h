@@ -23,7 +23,6 @@ struct DiodeModelType<2, HiddenSize>
 template <int HiddenSize>
 struct DiodeModelType<4, HiddenSize>
 {
-    // @TODO: Needs one more hidden layer!!
     using ModelType = RTNeural::ModelT<float,
                                        2,
                                        1,
@@ -34,6 +33,8 @@ struct DiodeModelType<4, HiddenSize>
                                        RTNeural::DenseT<float, HiddenSize, HiddenSize>, // Hidden layer 2
                                        RTNeural::TanhActivationT<float, HiddenSize>,
                                        RTNeural::DenseT<float, HiddenSize, HiddenSize>, // Hidden layer 3
+                                       RTNeural::TanhActivationT<float, HiddenSize>,
+                                       RTNeural::DenseT<float, HiddenSize, HiddenSize>, // Hidden layer 4
                                        RTNeural::TanhActivationT<float, HiddenSize>,
                                        RTNeural::DenseT<float, HiddenSize, 1>>;         // Output layer
 };

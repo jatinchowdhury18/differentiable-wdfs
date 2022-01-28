@@ -16,13 +16,12 @@ public:
     void parameterChanged (const String& paramID, float newValue) final;
 
 private:
-    DifferentiableWDFPlugin& plugin;
     AudioProcessorValueTreeState& vts;
 
     ComboBox circuitModelSelector;
     std::unique_ptr<ComboBoxParameterAttachment> circuitModelSelectorAttach;
 
-    static constexpr int numCircuits = 2;
+    static constexpr int numCircuits = 3;
     std::unique_ptr<CircuitModelGUI> modelGui[numCircuits];
     CPUMeter cpuMeter;
 

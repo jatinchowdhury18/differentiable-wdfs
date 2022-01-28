@@ -6,20 +6,19 @@ constexpr float topBarHeight = 0.15f;
 }
 
 PluginEditor::PluginEditor (DifferentiableWDFPlugin& p) : AudioProcessorEditor (p),
-                                                          plugin (p),
                                                           vts (p.getVTS()),
                                                           cpuMeter (p)
 {
     modelGui[0] = std::make_unique<CircuitModelGUI> (p.getDiodeClipper(), vts);
-    modelGui[1] = std::make_unique<CircuitModelGUI> (p.getTubeScreamer(), vts);
+    modelGui[1] = std::make_unique<CircuitModelGUI> (p.getMultiDiodeClipper(), vts);
+    modelGui[2] = std::make_unique<CircuitModelGUI> (p.getTubeScreamer(), vts);
 
     addAndMakeVisible (cpuMeter);
-    addAndMakeVisible (modelGui[0].get());
-    addAndMakeVisible (modelGui[1].get());
+    for (auto& gui : modelGui)
+        addAndMakeVisible (gui.get());
 
     addAndMakeVisible (circuitModelSelector);
     circuitModelSelector.addItemList (DiffWDFParams::circuitChoices, 1);
-    //    circuitModelSelector.setSelectedItemIndex (0);
     circuitModelSelectorAttach = std::make_unique<ComboBoxParameterAttachment> (*vts.getParameter (DiffWDFParams::circuitChoiceTag), circuitModelSelector, vts.undoManager);
 
     vts.addParameterListener (DiffWDFParams::circuitChoiceTag, this);

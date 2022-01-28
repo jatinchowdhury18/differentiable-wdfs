@@ -28,6 +28,6 @@ static void DiodeBench (benchmark::State& state)
         }
     }
 }
-BENCHMARK (DiodeBench)->MinTime (5)->Unit (benchmark::kMillisecond)->Arg (0)->Arg (1)->Arg (2);
+BENCHMARK (DiodeBench)->MinTime (5)->Unit (benchmark::kMillisecond)->Arg (0)->Arg (1)->Arg (2)->Arg (3)->Arg (4)->Arg (5)->Arg (6);
 
 BENCHMARK_MAIN();
