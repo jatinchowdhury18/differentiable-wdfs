@@ -16,3 +16,4 @@ wdf_py/*_model
 *.pkl
 wdf_py/diode_clipper/plots/
 wdf_py/diode_clipper/models/old/
+wdf_py/diode_clipper/models/learning_rate_models
