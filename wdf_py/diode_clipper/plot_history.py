@@ -4,7 +4,7 @@ import pickle
 
 # %%
 name = "Test History"
-history_file = './histories/1N4148 (1U-1D)_2x8_training_1_history.pkl'
+history_file = './histories/1N4148 (1U-1D)_2x8_training_3_history.pkl'
 
 with open(history_file, "rb") as f:
    history = pickle.load(f)
