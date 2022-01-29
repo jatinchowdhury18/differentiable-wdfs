@@ -31,10 +31,10 @@ from dataimport import load_diode_data
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 
 # %%
-n_layers = 2
-layer_size = 16
+n_layers = 4
+layer_size = 8
 diode = diode_1n4148_1u1d
-training_number = 10
+training_number = 1
 
 pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
 model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -80,7 +80,7 @@ train_X, train_Y = batch_data(train_data, train_N)
 val_X, val_Y = batch_data(val_data, val_N)
 
 # %%
-plot_batch = 336
+plot_batch = 150
 plt.plot(val_X[plot_batch, :, 0])
 plt.plot(val_Y[plot_batch, :, 0])
 
