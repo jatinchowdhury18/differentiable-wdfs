@@ -19,9 +19,9 @@ plots_dir = 'plots/pretraining'
 
 # %%
 n_layers = 2
-layer_size = 8
+layer_size = 16
 
-diode_to_train = diode_1n4148_3u3d
+diode_to_train = diode_1n4148_1u2d
 
 model_name = f'{diode_to_train.name}_{n_layers}x{layer_size}_pretrained'
 
@@ -168,3 +168,9 @@ save_model(diode_model, f'models/pretrained/{model_name}_model.json')
 # - 2x16: MSE = 7.98e-6, ESR = 9.49e-5
 # - 4x4:  MSE = 6.38e-4, ESR = 8.48e-4
 # - 4x8:  MSE = 4.43e-5, ESR = 2.24e-4
+
+# 2x16, 3U-3D: MSE: 6.14e-5, ESR: 2.46e-4, Tot: 3.07e-4
+# 2x16, 2U-3D: MSE: 7.65e-6, ESR: 9.29e-5, Tot: 1.01e-4
+# 2x16, 2U-2D: MSE: 1.79e-5, ESR: 1.53e-4, Tot: 1.71e-4
+# 2x16, 1U-3D: MSE: 1.15e-5, ESR: 1.10e-4, Tot: 1.25e-4
+# 2x16, 1U-2D: MSE: 1.87e-5, ESR: 1.51e-4, Tot: 1.70e-4
