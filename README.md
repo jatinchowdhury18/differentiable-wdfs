@@ -39,3 +39,28 @@ pip install -r requirements.txt
 # leave virtualenv
 deactivate
 ```
+
+## Building the Audio Plugin
+
+The audio plugin can be built using the CMake build system.
+
+```bash
+# Clone the repository
+$ git clone https://github.com/Chowdhury-DSP/BYOD.git
+$ cd BYOD
+
+# initialize and set up submodules
+$ git submodule update --init --recursive
+
+# build with CMake
+$ cmake -Bbuild
+$ cmake --build build --parallel 4
+```
+
+If you'd like to make an optimized "release" build, it is suggested to use some slightly different build commands:
+```bash
+$ cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
+$ cmake --build build --config Release --parallel 4
+```
+
+The resulting builds can be found in the `build/plugin/DifferentiableWDFs_artefacts` directory.
