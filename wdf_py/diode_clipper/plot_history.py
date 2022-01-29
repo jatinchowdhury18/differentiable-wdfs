@@ -4,7 +4,7 @@ import pickle
 
 # %%
 name = "Test History"
-history_file = './histories/1N4148 (1U-1D)_4x8_training_1_history.pkl'
+history_file = './histories/1N4148 (1U-1D)_2x8_training_1_history.pkl'
 
 with open(history_file, "rb") as f:
    history = pickle.load(f)
@@ -30,5 +30,8 @@ ax1.legend(handles=[mse_plot, esr_plot])
 plt.title(f'{name} Training History')
 
 # %%
+print(history['val_loss'][0])
 print(history['val_loss'][100])
+print(history['val_loss'][500])
+
 # %%
