@@ -34,27 +34,30 @@ import librosa
 
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 
-learning_rates_dict = {
-    "learning_rate":[1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3],
-    "beta1":[0.9,0.9,0.9,0.7,0.7,0.7,0.5,0.5,0.5,0.9,0.9,0.9,0.7,0.7,0.7,0.5,0.5,0.5],
-    "beta2":[0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7]
+# learning_rates_dict = {
+#     "learning_rate":[1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,5e-3,5e-3,5e-3,5e-3,5e-3,5e-3,5e-3,5e-3,5e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3],
+#     "beta1":[0.9,0.9,0.9,0.7,0.7,0.7,0.5,0.5,0.5,0.9,0.9,0.9,0.7,0.7,0.7,0.5,0.5,0.5,0.9,0.9,0.9,0.7,0.7,0.7,0.5,0.5,0.5],
+#     "beta2":[0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7]
     
-}
+# }
 
-network_dict = {
-    "n_layer" : [2,4],
-    "layer_size" : [16,8],
-}
+# network_dict = {
+#     "n_layer" : [2,4],
+#     "layer_size" : [16,8],
+# }
 
 
-for train_num in range(2):
+for train_num in range(1):
     # if learning_rates_num < 17:
     #     continue
 
-    n_layers = network_dict["n_layer"][train_num]
-    layer_size = network_dict["layer_size"][train_num]
+    n_layers = 2
+    layer_size = 16
     diode = diode_1n4148_1u1d
-    training_number = train_num+8
+    # learning_rate_n = learning_rates_dict["learning_rate"][train_num]
+    # beta1n = learning_rates_dict["beta1"][train_num]
+    # beta2n = learning_rates_dict["beta2"][train_num]
+    training_number = 2000#f"{train_num+1}_lr_{learning_rate_n}_beta1_{beta1n}_beta2_{beta2n}"
 
     pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
     model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -259,7 +262,7 @@ for train_num in range(2):
 
 
     
-    for epoch in tqdm(range(101)):
+    for epoch in tqdm(range(2001)):
         with tf.GradientTape() as tape:
             outs = tf.transpose(model.forward(train_X)[..., 0], perm=[1, 0, 2])
             loss = loss_func(outs[:, skip_samples:, :], train_Y[:, skip_samples:, :])
