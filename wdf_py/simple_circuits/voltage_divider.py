@@ -66,7 +66,6 @@ R1s = []
 R2s = []
 losses = []
 
-# for epoch in tqdm.tqdm(range(250)):
 for epoch in tqdm.tqdm(range(100)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in)[...,0]

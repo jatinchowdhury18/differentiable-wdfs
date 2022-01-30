@@ -64,3 +64,6 @@ $ cmake --build build --config Release --parallel 4
 ```
 
 The resulting builds can be found in the `build/plugin/DifferentiableWDFs_artefacts` directory.
+
+# License
+The code in this repository is licensed under BSD 3-clause license.
