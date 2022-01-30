@@ -1,14 +1,17 @@
 import tensorflow as tf
-tf.get_logger().setLevel('WARN')
+
+tf.get_logger().setLevel("WARN")
+
 
 def voltage(wdf):
     return (wdf.a + wdf.b) * tf.constant(0.5)
 
+
 class IdealVoltageSource(tf.Module):
     def __init__(self):
         super(IdealVoltageSource, self).__init__()
-        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
-        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+        self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
+        self.b = tf.Variable(initial_value=tf.zeros(1), name="reflected_wave")
 
     def set_voltage(self, voltage):
         self.Vs = voltage
@@ -20,13 +23,16 @@ class IdealVoltageSource(tf.Module):
         self.b = -self.a + tf.constant(2.0) * self.Vs
         return self.b
 
-class ResistiveVoltageSource(tf.Module):
-    def __init__(self, initial_R = 1.0e-9, trainable = False):
-        super(ResistiveVoltageSource, self).__init__()
-        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
-        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
 
-        self.R = tf.Variable(initial_value=initial_R, name='resistance', trainable=trainable)
+class ResistiveVoltageSource(tf.Module):
+    def __init__(self, initial_R=1.0e-9, trainable=False):
+        super(ResistiveVoltageSource, self).__init__()
+        self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
+        self.b = tf.Variable(initial_value=tf.zeros(1), name="reflected_wave")
+
+        self.R = tf.Variable(
+            initial_value=initial_R, name="resistance", trainable=trainable
+        )
 
     def calc_impedance(self):
         pass
@@ -36,7 +42,7 @@ class ResistiveVoltageSource(tf.Module):
 
     def set_voltage(self, voltage):
         self.Vs = voltage
-    
+
     def set_resistance(self, resistance):
         self.R = resistance
 
@@ -47,14 +53,20 @@ class ResistiveVoltageSource(tf.Module):
         self.b = self.Vs * tf.ones_like(self.a)
         return self.b
 
-class Resistor(tf.Module):
-    def __init__(self, initial_R, trainable = False):
-        super(Resistor, self).__init__()
-        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
-        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
 
-        self.R = tf.Variable(initial_value=initial_R, name='resistance', dtype=tf.float32,
-                             trainable=trainable, constraint=lambda z: tf.clip_by_value(z, 180.0, 1.0e6))
+class Resistor(tf.Module):
+    def __init__(self, initial_R, trainable=False):
+        super(Resistor, self).__init__()
+        self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
+        self.b = tf.Variable(initial_value=tf.zeros(1), name="reflected_wave")
+
+        self.R = tf.Variable(
+            initial_value=initial_R,
+            name="resistance",
+            dtype=tf.float32,
+            trainable=trainable,
+            constraint=lambda z: tf.clip_by_value(z, 180.0, 1.0e6),
+        )
 
     def calc_impedance(self):
         pass
@@ -69,18 +81,28 @@ class Resistor(tf.Module):
         self.b = tf.zeros_like(self.a)
         return self.b
 
+
 class Capacitor(tf.Module):
-    def __init__(self, initial_C, FS, trainable = False):
+    def __init__(self, initial_C, FS, trainable=False):
         super(Capacitor, self).__init__()
-        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
-        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+        self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
+        self.b = tf.Variable(initial_value=tf.zeros(1), name="reflected_wave")
 
         self.FS = FS
-        self.C = tf.Variable(initial_value=initial_C, name='capacitance', dtype=tf.float32,
-                             trainable=trainable, constraint=lambda z: tf.clip_by_value(z, 0.1e-12, 1.0))
-        self.R = tf.Variable(initial_value=1.0 / (2.0 * initial_C * FS), name='impedance', trainable=False)
-        
-        self.z = tf.Variable(initial_value=0.0, name='state', trainable=False)
+        self.C = tf.Variable(
+            initial_value=initial_C,
+            name="capacitance",
+            dtype=tf.float32,
+            trainable=trainable,
+            constraint=lambda z: tf.clip_by_value(z, 0.1e-12, 1.0),
+        )
+        self.R = tf.Variable(
+            initial_value=1.0 / (2.0 * initial_C * FS),
+            name="impedance",
+            trainable=False,
+        )
+
+        self.z = tf.Variable(initial_value=0.0, name="state", trainable=False)
 
     def calc_impedance(self):
         self.R = tf.math.reciprocal(self.C * (2.0 * self.FS))
@@ -96,11 +118,12 @@ class Capacitor(tf.Module):
         self.b = self.z
         return self.b
 
+
 class Series(tf.Module):
     def __init__(self, P1, P2):
         super(Series, self).__init__()
-        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
-        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+        self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
+        self.b = tf.Variable(initial_value=tf.zeros(1), name="reflected_wave")
 
         self.P1 = P1
         self.P2 = P2
@@ -118,16 +141,17 @@ class Series(tf.Module):
         self.P1.incident(b1)
         self.P2.incident(-(x + b1))
         self.a = x
-        
+
     def reflected(self):
         self.b = -(self.P1.reflected() + self.P2.reflected())
         return self.b
 
+
 class Parallel(tf.Module):
     def __init__(self, P1, P2):
         super(Parallel, self).__init__()
-        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
-        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+        self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
+        self.b = tf.Variable(initial_value=tf.zeros(1), name="reflected_wave")
 
         self.P1 = P1
         self.P2 = P2
@@ -148,7 +172,7 @@ class Parallel(tf.Module):
         self.P1.incident(self.b_diff + b2)
         self.P2.incident(b2)
         self.a = x
-        
+
     def reflected(self):
         b1 = self.P1.reflected()
         b2 = self.P2.reflected()
@@ -158,11 +182,12 @@ class Parallel(tf.Module):
         self.b = b2 + self.b_temp
         return self.b
 
+
 class Inverter(tf.Module):
     def __init__(self, P1):
         super(Inverter, self).__init__()
-        self.a = tf.Variable(initial_value=tf.zeros(1), name='incident_wave')
-        self.b = tf.Variable(initial_value=tf.zeros(1), name='reflected_wave')
+        self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
+        self.b = tf.Variable(initial_value=tf.zeros(1), name="reflected_wave")
 
         self.P1 = P1
 
@@ -173,8 +198,7 @@ class Inverter(tf.Module):
     def incident(self, x):
         self.P1.incident(-x)
         self.a = x
-        
+
     def reflected(self):
         self.b = -self.P1.reflected()
         return self.b
-

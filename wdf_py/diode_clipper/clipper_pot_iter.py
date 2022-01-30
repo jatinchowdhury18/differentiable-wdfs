@@ -1,4 +1,4 @@
- # %%
+# %%
 import sys
 
 sys.path.insert(0, "../lib")
@@ -28,8 +28,8 @@ from diode_config import (
 from model_utils import *
 from dataimport import load_diode_data
 
-#EXPERIMENTAL
-import librosa 
+# EXPERIMENTAL
+import librosa
 
 
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
@@ -38,7 +38,7 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 #     "learning_rate":[1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,1e-4,5e-3,5e-3,5e-3,5e-3,5e-3,5e-3,5e-3,5e-3,5e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3,1e-3],
 #     "beta1":[0.9,0.9,0.9,0.7,0.7,0.7,0.5,0.5,0.5,0.9,0.9,0.9,0.7,0.7,0.7,0.5,0.5,0.5,0.9,0.9,0.9,0.7,0.7,0.7,0.5,0.5,0.5],
 #     "beta2":[0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7,0.999,0.8,0.7]
-    
+
 # }
 
 # network_dict = {
@@ -71,19 +71,20 @@ for train_num in range(2):
     model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
     plots_dir = Path(f"./plots/{model_name}")
 
-    assert not plots_dir.exists(), "Plots for this training run have already been created!"
+    assert (
+        not plots_dir.exists()
+    ), "Plots for this training run have already been created!"
     plots_dir.mkdir()
 
-    
     C_val = 4.7e-9
-    train_data, train_N, val_data, val_N, FS = load_diode_data(diode, BASE_DIR, HPF=False)
+    train_data, train_N, val_data, val_N, FS = load_diode_data(
+        diode, BASE_DIR, HPF=False
+    )
 
     print(train_data.shape)
     print(val_data.shape)
 
-    
     batch_size = 2048
-
 
     def batch_data(data, N):
         x = data[0]
@@ -106,16 +107,13 @@ for train_num in range(2):
 
         return data_in_batched, data_target_batched
 
-
     train_X, train_Y = batch_data(train_data, train_N)
     val_X, val_Y = batch_data(val_data, val_N)
 
-    
     plot_batch = 330
     plt.plot(val_X[plot_batch, :, 0])
     plt.plot(val_Y[plot_batch, :, 0])
 
-    
     class ClipperModel(tf.Module):
         def __init__(self, json):
             super(ClipperModel, self).__init__()
@@ -141,7 +139,9 @@ for train_num in range(2):
                 self.Vs.set_resistance(input[:, i, 1:2])
                 self.P1.calc_impedance()
 
-                model_in = tf.concat((self.P1.reflected(), tf.math.log(self.P1.R)), axis=1)
+                model_in = tf.concat(
+                    (self.P1.reflected(), tf.math.log(self.P1.R)), axis=1
+                )
                 self.model.incident(tf.transpose(model_in, perm=[0, 2, 1]))
                 self.P1.incident(self.model.reflected())
 
@@ -151,22 +151,17 @@ for train_num in range(2):
             output_sequence = output_sequence.stack()
             return output_sequence
 
-
-    
     with open(f"./models/pretrained/{pretrained_model}_model.json", "r") as read_file:
         model_json = json.load(read_file)
 
-    policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')
-    tf.keras.mixed_precision.experimental.set_policy(policy) 
+    policy = tf.keras.mixed_precision.experimental.Policy("mixed_float16")
+    tf.keras.mixed_precision.experimental.set_policy(policy)
     model = ClipperModel(model_json)
 
-    
     def pre_emphasis_filter(x, coeff=0.85):
         return tf.concat([x[0:1], x[1:] - coeff * x[:-1]], axis=0)
 
-
     eps = np.finfo(float).eps
-
 
     def esr_loss(target_y, predicted_y, emphasis_func=lambda x: x):
         target_yp = emphasis_func(target_y)
@@ -178,15 +173,12 @@ for train_num in range(2):
         N = tf.cast((tf.shape(target_y)[0] * tf.shape(target_y)[1]), tf.float32)
         return tf.sqrt(loss_unnorm / N)
 
-
     esr_with_emph = lambda target, pred: esr_loss(target, pred, pre_emphasis_filter)
-
 
     def avg_loss(target_y, pred_y):
         target_mean = tf.math.reduce_mean(target_y)
         pred_mean = tf.math.reduce_mean(pred_y)
         return tf.math.abs(target_mean - pred_mean)
-
 
     def bounds_loss(target_y, pred_y):
         target_min = tf.math.reduce_min(target_y)
@@ -196,28 +188,34 @@ for train_num in range(2):
         return tf.math.abs(target_min - pred_min) + tf.math.abs(target_max - pred_max)
 
     def fft_loss(target_y, pred_y):
-        target_fft = librosa.stft(np.array((np.reshape(target_y,(target_y.shape[0]*target_y.shape[1])))), n_fft=len(np.reshape(target_y,(target_y.shape[0]*target_y.shape[1]))))
-        pred_fft = librosa.stft(np.array(np.reshape(pred_y,(pred_y.shape[0]*pred_y.shape[1]))), n_fft=len(np.reshape(pred_y,(pred_y.shape[0]*pred_y.shape[1]))))
-        loss_amt = np.abs(target_fft-pred_fft)
+        target_fft = librosa.stft(
+            np.array((np.reshape(target_y, (target_y.shape[0] * target_y.shape[1])))),
+            n_fft=len(np.reshape(target_y, (target_y.shape[0] * target_y.shape[1]))),
+        )
+        pred_fft = librosa.stft(
+            np.array(np.reshape(pred_y, (pred_y.shape[0] * pred_y.shape[1]))),
+            n_fft=len(np.reshape(pred_y, (pred_y.shape[0] * pred_y.shape[1]))),
+        )
+        loss_amt = np.abs(target_fft - pred_fft)
         loss_amt = tf.math.reduce_sum(loss_amt)
         N = tf.cast((tf.shape(target_y)[0] * tf.shape(target_y)[1]), tf.float32)
 
-        return loss_amt/N
-
+        return loss_amt / N
 
     mse_loss = tf.keras.losses.MeanSquaredError()
-    loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred) #+ fft_loss(target,pred)
-
+    loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(
+        target, pred
+    )  # + fft_loss(target,pred)
 
     # optimizer = tf.keras.optimizers.Nadam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-9)
     optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4, beta_1=0.5, beta_2=0.999)
     optimizer = tf.keras.mixed_precision.LossScaleOptimizer(optimizer)
-    
+
     # def plot_target_pred(target, predicted, epoch):
     #     plt.figure()
     #     plt.plot(target[:batch_size], label="Target")
     #     plt.plot(predicted[:batch_size], "--", label="Predicted")
-        
+
     #     plt.xlabel("Time [samples]")
     #     plt.ylabel("Voltage")
 
@@ -236,8 +234,7 @@ for train_num in range(2):
         axs[0].set_ylabel("Voltage")
         axs[0].grid(True)
         axs[0].legend(loc="lower left")
-        axs[0].set_title("Training",loc="left")
-
+        axs[0].set_title("Training", loc="left")
 
         axs[1].plot(val_target[:batch_size], label="Target")
         axs[1].plot(val_predicted[:batch_size], "--", label="Predicted")
@@ -248,7 +245,9 @@ for train_num in range(2):
         axs[1].set_title("Validation", loc="left")
         fig.tight_layout()
 
-        fig.suptitle(f"Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}")
+        fig.suptitle(
+            f"Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}"
+        )
         fig.set_size_inches(7.5, 5)
         fig.subplots_adjust(wspace=0, hspace=0.4)
 
@@ -257,7 +256,6 @@ for train_num in range(2):
         fig.savefig(f"./{plots_dir}/epoch_{epoch}.png")
         plt.close()
 
-    
     skip_samples = 50  # skip the first few samples to let state build up
     history = {
         "loss": [],
@@ -268,8 +266,6 @@ for train_num in range(2):
         "val_esr": [],
     }
 
-
-    
     for epoch in tqdm(range(epoch_nums)):
         with tf.GradientTape() as tape:
             outs = tf.transpose(model.forward(train_X)[..., 0], perm=[1, 0, 2])
@@ -314,9 +310,9 @@ for train_num in range(2):
         pickle.dump(history, f)
 
     outs = tf.transpose(model.forward(train_X)[..., 0], perm=[1, 0, 2])
-    
+
     val_outs = tf.transpose(model.forward(val_X)[..., 0], perm=[1, 0, 2])
-    
+
     train_target = train_Y[plot_batch, skip_samples:, 0]
     train_pred = outs[plot_batch, skip_samples:, 0]
     val_target = val_Y[plot_batch, skip_samples:, 0]
@@ -325,7 +321,6 @@ for train_num in range(2):
     # plt.ylim(-0.2, 0.2)
     # plt.xlim(11150, 11900)
 
-    
     def save_model_json(model):
         def get_weights(layer):
             weights = layer.kernel.numpy()[0]
@@ -352,12 +347,10 @@ for train_num in range(2):
         model_dict["layers"] = layers
         return model_dict
 
-
     def save_model(model, filename):
         model_dict = save_model_json(model)
         with open(filename, "w") as outfile:
             json.dump(model_dict, outfile, cls=NumpyArrayEncoder, indent=4)
-
 
     save_model(model.model, f"./models/{model_name}.json")
 
