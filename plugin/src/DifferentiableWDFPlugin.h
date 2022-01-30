@@ -12,7 +12,7 @@ const String multiDiodeClipperPrefix = "multi_diode_clipper_";
 const String tubeScreamerPrefix = "tube_screamer_";
 
 const String circuitChoiceTag = "circuit_choice";
-const StringArray circuitChoices { "Diode Clipper", "Multi Diode Clipper", "Tube Screamer" };
+const StringArray circuitChoices { "Diode Clipper", "Multi Diode Clipper", "Tube Screamer Clipping Stage" };
 } // namespace DiffWDFParams
 
 class DifferentiableWDFPlugin : public chowdsp::PluginBase<DifferentiableWDFPlugin>
