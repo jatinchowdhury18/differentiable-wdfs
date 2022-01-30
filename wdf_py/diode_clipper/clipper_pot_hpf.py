@@ -34,7 +34,7 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 n_layers = 2
 layer_size = 16
 diode = diode_1n4148_1u1d
-training_number = f"1_hpf"
+training_number = f"2_hpf"
 
 pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
 model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -88,10 +88,7 @@ plt.plot(val_Y[plot_batch, :, 0])
 class ClipperModel(tf.Module):
     def __init__(self, json):
         super(ClipperModel, self).__init__()
-        # self.Vs = wdf.ResistiveVoltageSource(45.0e3)
-        # self.C = wdf.Capacitor(C_val, FS)
-        # self.P1 = wdf.Parallel(self.Vs, self.C)
-        self.Vs = wdf.ResistiveVoltageSource(35.0e3)
+        self.Vs = wdf.ResistiveVoltageSource()
         self.C = wdf.Capacitor(C_val, FS)
         self.S1 = wdf.Series(self.Vs, self.C)
         self.R = wdf.Resistor(35.0e3)
@@ -111,7 +108,7 @@ class ClipperModel(tf.Module):
         for i in range(sequence_length):
             self.Vs.set_voltage(input[:, i, 0:1])
 
-            self.Vs.set_resistance(input[:, i, 1:2])
+            self.R.set_resistance(input[:, i, 1:2])
             self.P1.calc_impedance()
 
             model_in = tf.concat((self.P1.reflected(), tf.math.log(self.P1.R)), axis=1)
@@ -276,6 +273,10 @@ with open(f"./histories/{model_name}_history.pkl", "wb") as f:
 
 # %%
 val_outs = tf.transpose(model.forward(val_X)[..., 0], perm=[1, 0, 2])
+
+# %%
+val_loss = loss_func(val_outs[:, skip_samples:, :], val_Y[:, skip_samples:, :])
+print(f"Final Loss: {val_loss}")
 
 # %%
 target = val_Y[plot_batch, skip_samples:, 0]

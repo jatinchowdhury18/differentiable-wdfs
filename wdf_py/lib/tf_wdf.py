@@ -59,6 +59,9 @@ class Resistor(tf.Module):
     def calc_impedance(self):
         pass
 
+    def set_resistance(self, resistance):
+        self.R = resistance
+
     def incident(self, x):
         self.a = x
 
