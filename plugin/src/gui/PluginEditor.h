@@ -21,7 +21,7 @@ private:
     ComboBox circuitModelSelector;
     std::unique_ptr<ComboBoxParameterAttachment> circuitModelSelectorAttach;
 
-    static constexpr int numCircuits = 4;
+    static constexpr int numCircuits = 3;
     std::unique_ptr<CircuitModelGUI> modelGui[numCircuits];
     CPUMeter cpuMeter;
 

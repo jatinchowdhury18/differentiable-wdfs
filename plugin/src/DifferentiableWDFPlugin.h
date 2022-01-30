@@ -9,11 +9,10 @@ namespace DiffWDFParams
 {
 const String diodeClipperPrefix = "diode_clipper_";
 const String multiDiodeClipperPrefix = "multi_diode_clipper_";
-const String hpfDiodeClipperPrefix = "hpf_diode_clipper_";
 const String tubeScreamerPrefix = "tube_screamer_";
 
 const String circuitChoiceTag = "circuit_choice";
-const StringArray circuitChoices { "Diode Clipper", "Multi Diode Clipper", "HPF Diode Clipper", "Tube Screamer" };
+const StringArray circuitChoices { "Diode Clipper", "Multi Diode Clipper", "Tube Screamer" };
 } // namespace DiffWDFParams
 
 class DifferentiableWDFPlugin : public chowdsp::PluginBase<DifferentiableWDFPlugin>
@@ -34,7 +33,6 @@ public:
 
     auto& getDiodeClipper() { return diodeClipper; }
     auto& getMultiDiodeClipper() { return multiDiodeClipper; }
-    auto& getHPFDiodeClipper() { return hpfDiodeClipper; }
     auto& getTubeScreamer() { return tubeScreamer; }
 
 private:
@@ -42,7 +40,6 @@ private:
 
     DiodeClipper diodeClipper;
     MultiDiodeClipper multiDiodeClipper;
-    HPFDiodeClipper hpfDiodeClipper;
     TubeScreamer tubeScreamer;
 
     AudioBuffer<float> monoBuffer;
