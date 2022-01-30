@@ -126,7 +126,7 @@ with open(f"./models/pretrained/{pretrained_model}_model.json", "r") as read_fil
     model_json = json.load(read_file)
 
 # policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')
-# tf.keras.mixed_precision.experimental.set_policy(policy) 
+# tf.keras.mixed_precision.experimental.set_policy(policy)
 model = ClipperModel(model_json)
 
 # %%
@@ -176,7 +176,7 @@ def plot_target_pred_val(target, predicted, epoch):
     plt.figure()
     plt.plot(target[:batch_size], label="Target")
     plt.plot(predicted[:batch_size], "--", label="Predicted")
-    
+
     plt.xlabel("Time [samples]")
     plt.ylabel("Voltage")
 
@@ -185,6 +185,7 @@ def plot_target_pred_val(target, predicted, epoch):
 
     plt.savefig(f"./{plots_dir}/epoch_{epoch}.png")
     plt.close()
+
 
 def plot_target_pred(target, predicted, val_target, val_predicted, epoch):
     fig, axs = plt.subplots(2, 1)
@@ -195,8 +196,7 @@ def plot_target_pred(target, predicted, val_target, val_predicted, epoch):
     axs[0].set_ylabel("Voltage")
     axs[0].grid(True)
     axs[0].legend(loc="lower left")
-    axs[0].set_title("Training",loc="left")
-
+    axs[0].set_title("Training", loc="left")
 
     axs[1].plot(val_target[:batch_size], label="Target")
     axs[1].plot(val_predicted[:batch_size], "--", label="Predicted")
@@ -207,14 +207,16 @@ def plot_target_pred(target, predicted, val_target, val_predicted, epoch):
     axs[1].set_title("Validation", loc="left")
     fig.tight_layout()
 
-
-    fig.suptitle(f"Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}")
+    fig.suptitle(
+        f"Diode Clipper ({diode.name}, {n_layers}x{layer_size}), Epoch {epoch}"
+    )
     fig.set_size_inches(7.5, 5)
     fig.subplots_adjust(wspace=0, hspace=0.4)
     plt.show()
 
     fig.savefig(f"./{plots_dir}/epoch_{epoch}.png")
     plt.close()
+
 
 # %%
 skip_samples = 50  # skip the first few samples to let state build up
