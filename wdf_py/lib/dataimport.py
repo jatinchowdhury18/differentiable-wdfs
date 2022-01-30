@@ -59,22 +59,30 @@ def createDataset(path, plot = False):
     return output_dict
     
 
-def get_data_path_for_diode(diode, BASE_DIR):
+def get_data_path_for_diode(diode, BASE_DIR, HPF2=False):
     path = Path(f'{BASE_DIR}/diode_dataset')
 
     if '1N4148' in diode.name:
-        path = Path.joinpath(path, '1N4148')
+        if '1N4148' in diode.name and HPF2 == True:
+            path = Path.joinpath(path, 'placeholder_data/HPF')
+        else:
+            path = Path.joinpath(path, '1N4148')
+        
     elif 'OA1154' in diode.name:
         path = Path.joinpath(path, 'OA1154')
+    
     else:
         assert False, "No data available for this diode!"
 
     sub_folder = f'{diode.N_up}up{diode.N_down}down'
+
     return Path.joinpath(path, sub_folder)
 
 
-def load_diode_data(diode, BASE_DIR, start_offset=0, csv_samples=-1, plot=False):
-    data_path = get_data_path_for_diode(diode, BASE_DIR)
+def load_diode_data(diode, BASE_DIR, start_offset=0, csv_samples=-1, plot=False, HPF=False):
+    print(HPF)
+    data_path = get_data_path_for_diode(diode, BASE_DIR, HPF2=HPF)
+    print(data_path)
 
     train_num_samples = 0
     val_num_samples = 0
@@ -85,7 +93,7 @@ def load_diode_data(diode, BASE_DIR, start_offset=0, csv_samples=-1, plot=False)
 
         R_val = float(csv_path.parts[-1].partition('k')[0])
         
-        if R_val < 30 or R_val > 73:
+        if R_val < 36 or R_val > 73:
             print(R_val)
             raw_data = createDataset(csv_path, plot=plot)
             FS = raw_data["FS"]

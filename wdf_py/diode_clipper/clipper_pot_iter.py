@@ -47,17 +47,25 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 # }
 
 
-for train_num in range(1):
+for train_num in range(2):
     # if learning_rates_num < 17:
     #     continue
+    if train_num == 0:
+        layer_size = 16
+        epoch_nums = 2001
+        training_number = 2000
+    else:
+        layer_size = 8
+        epoch_nums = 501
+        training_number = "8_500"
 
     n_layers = 2
-    layer_size = 16
+    # layer_size = 16
     diode = diode_1n4148_1u1d
     # learning_rate_n = learning_rates_dict["learning_rate"][train_num]
     # beta1n = learning_rates_dict["beta1"][train_num]
     # beta2n = learning_rates_dict["beta2"][train_num]
-    training_number = 2000#f"{train_num+1}_lr_{learning_rate_n}_beta1_{beta1n}_beta2_{beta2n}"
+    # training_number = 2000#f"{train_num+1}_lr_{learning_rate_n}_beta1_{beta1n}_beta2_{beta2n}"
 
     pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
     model_name = f"{diode.name}_{n_layers}x{layer_size}_training_{training_number}"
@@ -68,7 +76,7 @@ for train_num in range(1):
 
     
     C_val = 4.7e-9
-    train_data, train_N, val_data, val_N, FS = load_diode_data(diode, BASE_DIR)
+    train_data, train_N, val_data, val_N, FS = load_diode_data(diode, BASE_DIR, HPF=False)
 
     print(train_data.shape)
     print(val_data.shape)
@@ -262,7 +270,7 @@ for train_num in range(1):
 
 
     
-    for epoch in tqdm(range(2001)):
+    for epoch in tqdm(range(epoch_nums)):
         with tf.GradientTape() as tape:
             outs = tf.transpose(model.forward(train_X)[..., 0], perm=[1, 0, 2])
             loss = loss_func(outs[:, skip_samples:, :], train_Y[:, skip_samples:, :])
@@ -353,6 +361,7 @@ for train_num in range(1):
 
     save_model(model.model, f"./models/{model_name}.json")
 
-    
+# exec(open("./clipper_pot_hpf.py").read())
+# execfile('file.py')
 
 # %%
