@@ -24,7 +24,7 @@ void TubeScreamer::addParameters (chowdsp::Parameters& params, const String& pre
     emplace_param<VTSParam> (params, prefix + gainTag, "Gain", String(), NormalisableRange { -12.0f, 12.0f }, 0.0f, &gainValToString, &stringToGainVal);
     emplace_param<VTSParam> (params, prefix + driveTag, "Drive", String(), NormalisableRange { 0.0f, 1.0f }, 0.5f, &percentValToString, &stringToPercentVal);
 
-    StringArray modelChoices { "1N4148 Approx", "1N4148 2x8" };
+    StringArray modelChoices { "1N4148 Approx", "1N4148 2x16" };
     emplace_param<AudioParameterChoice> (params, prefix + modelTag, "Model", modelChoices, 0);
 }
 

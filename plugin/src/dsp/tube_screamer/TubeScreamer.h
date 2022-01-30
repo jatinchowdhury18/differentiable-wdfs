@@ -71,7 +71,7 @@ private:
     wdft::WDFParallelT<float, decltype (P2), decltype (R)> P3 { P2, R };
 
     wdft::DiodePairT<float, decltype (P3)> dpApprox { P3, 4.352e-9f, 25.85e-3f, 1.906f }; // 1N4148
-    DiodePairNeuralModel<decltype (P3), 2, 8> dp2x8Model { P3, "_1N4148_1U1D_2x8_training_2_json" };
+    DiodePairNeuralModel<decltype (P3), 2, 16> dp2x8Model { P3, "_1N4148_1U1D_2x16_training_2000_json" };
 
     int modelChoice = 0;
     int prevModelChoice = 0;

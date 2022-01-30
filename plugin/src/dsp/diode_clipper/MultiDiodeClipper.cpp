@@ -20,13 +20,13 @@ MultiDiodeClipper::MultiDiodeClipper (const String& prefix, AudioProcessorValueT
 void MultiDiodeClipper::addParameters (chowdsp::Parameters& params, const String& prefix)
 {
     using namespace chowdsp::ParamUtils;
-    emplace_param<VTSParam> (params, prefix + gainTag, "Gain", String(), NormalisableRange { -18.0f, 18.0f }, 0.0f, &gainValToString, &stringToGainVal);
+    emplace_param<VTSParam> (params, prefix + gainTag, "Gain", String(), NormalisableRange { 0.0f, 24.0f }, 0.0f, &gainValToString, &stringToGainVal);
 
     NormalisableRange cutoffRange { 200.0f, 20000.0f };
     cutoffRange.setSkewForCentre (2000.0f);
     emplace_param<VTSParam> (params, prefix + cutoffTag, "Cutoff", String(), cutoffRange, 4000.0f, &freqValToString, &stringToFreqVal);
 
-    StringArray modelChoices { "1up/2down 2x8", "2up/2down 2x8", "1up/3down 2x8", "2up/3down 2x8", "3up/3down 2x8" };
+    StringArray modelChoices { "1up/2down 2x16", "2up/2down 2x16", "1up/3down 2x16", "2up/3down 2x16", "3up/3down 2x16" };
     emplace_param<AudioParameterChoice> (params, prefix + modelTag, "Model", modelChoices, 0);
 }
 

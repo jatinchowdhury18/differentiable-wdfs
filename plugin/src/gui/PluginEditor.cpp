@@ -11,7 +11,8 @@ PluginEditor::PluginEditor (DifferentiableWDFPlugin& p) : AudioProcessorEditor (
 {
     modelGui[0] = std::make_unique<CircuitModelGUI> (p.getDiodeClipper(), vts);
     modelGui[1] = std::make_unique<CircuitModelGUI> (p.getMultiDiodeClipper(), vts);
-    modelGui[2] = std::make_unique<CircuitModelGUI> (p.getTubeScreamer(), vts);
+    modelGui[2] = std::make_unique<CircuitModelGUI> (p.getHPFDiodeClipper(), vts);
+    modelGui[3] = std::make_unique<CircuitModelGUI> (p.getTubeScreamer(), vts);
 
     addAndMakeVisible (cpuMeter);
     for (auto& gui : modelGui)

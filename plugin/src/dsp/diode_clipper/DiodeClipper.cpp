@@ -20,7 +20,7 @@ DiodeClipper::DiodeClipper (const String& prefix, AudioProcessorValueTreeState& 
 void DiodeClipper::addParameters (chowdsp::Parameters& params, const String& prefix)
 {
     using namespace chowdsp::ParamUtils;
-    emplace_param<VTSParam> (params, prefix + gainTag, "Gain", String(), NormalisableRange { -18.0f, 18.0f }, 0.0f, &gainValToString, &stringToGainVal);
+    emplace_param<VTSParam> (params, prefix + gainTag, "Gain", String(), NormalisableRange { 0.0f, 24.0f }, 0.0f, &gainValToString, &stringToGainVal);
 
     NormalisableRange cutoffRange { 200.0f, 20000.0f };
     cutoffRange.setSkewForCentre (2000.0f);

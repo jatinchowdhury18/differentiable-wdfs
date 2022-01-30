@@ -5,6 +5,7 @@ using namespace DiffWDFParams;
 
 DifferentiableWDFPlugin::DifferentiableWDFPlugin() : diodeClipper (diodeClipperPrefix, vts),
                                                      multiDiodeClipper (multiDiodeClipperPrefix, vts),
+                                                     hpfDiodeClipper (hpfDiodeClipperPrefix, vts),
                                                      tubeScreamer (tubeScreamerPrefix, vts)
 {
     modelChoiceParam = vts.getRawParameterValue (circuitChoiceTag);
@@ -14,6 +15,7 @@ void DifferentiableWDFPlugin::addParameters (Parameters& params)
 {
     DiodeClipper::addParameters (params, diodeClipperPrefix);
     MultiDiodeClipper::addParameters (params, multiDiodeClipperPrefix);
+    HPFDiodeClipper::addParameters (params, hpfDiodeClipperPrefix);
     TubeScreamer::addParameters (params, tubeScreamerPrefix);
 
     chowdsp::ParamUtils::emplace_param<AudioParameterChoice> (params, circuitChoiceTag, "Circuit", circuitChoices, 0);
@@ -23,9 +25,13 @@ void DifferentiableWDFPlugin::prepareToPlay (double sampleRate, int samplesPerBl
 {
     diodeClipper.prepare (sampleRate, samplesPerBlock);
     multiDiodeClipper.prepare (sampleRate, samplesPerBlock);
+    hpfDiodeClipper.prepare (sampleRate, samplesPerBlock);
     tubeScreamer.prepare (sampleRate, samplesPerBlock);
 
     monoBuffer.setSize (1, samplesPerBlock);
+
+    dcBlocker.reset();
+    dcBlocker.calcCoefs (25.0f, (float) sampleRate);
 
     loadMeasurer.reset (sampleRate, samplesPerBlock);
 }
@@ -67,9 +73,13 @@ void DifferentiableWDFPlugin::processAudioBlock (AudioBuffer<float>& buffer)
     else if (circuitChoice == 1)
         multiDiodeClipper.process (monoBuffer);
     else if (circuitChoice == 2)
+        hpfDiodeClipper.process (monoBuffer);
+    else if (circuitChoice == 3)
         tubeScreamer.process (monoBuffer);
     else
         jassertfalse; // unknown circuit!
+
+    dcBlocker.processBlock (monoBuffer.getWritePointer (0), numSamples);
 
     // split back to multi-channel
     for (int ch = 0; ch < numChannels; ++ch)
