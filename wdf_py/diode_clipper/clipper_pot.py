@@ -32,8 +32,8 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 
 # %%
 n_layers = 2
-layer_size = 8
-diode = diode_1n4148_1u1d
+layer_size = 16
+diode = diode_1n4148_3u3d
 training_number = 3
 
 pretrained_model = f"{diode.name}_{n_layers}x{layer_size}_pretrained"
@@ -80,7 +80,7 @@ train_X, train_Y = batch_data(train_data, train_N)
 val_X, val_Y = batch_data(val_data, val_N)
 
 # %%
-plot_batch = 159
+plot_batch = 148
 plt.plot(val_X[plot_batch, :, 0])
 plt.plot(val_Y[plot_batch, :, 0])
 
