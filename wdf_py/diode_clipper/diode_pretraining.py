@@ -1,6 +1,7 @@
 # %%
-import sys
+'''Script for pre-trainign diode models on synthetic data'''
 
+import sys
 sys.path.insert(0, "../lib")
 
 import numpy as np
@@ -21,6 +22,7 @@ from diode_config import (
 plots_dir = "plots/pretraining"
 
 # %%
+# Model parameters:
 n_layers = 2
 layer_size = 16
 
@@ -59,6 +61,7 @@ def diode_pair_func(x, R, diode):
 
 
 # %%
+# Generate input signal:
 N = 1000
 test_x = None
 for R_order in np.linspace(1, 9, 20):
@@ -72,8 +75,9 @@ for R_order in np.linspace(1, 9, 20):
         test_x = np.concatenate([test_x, in_vals])
 
 # %%
-fig, ax1 = plt.subplots()
+# Plot input signal:
 
+fig, ax1 = plt.subplots()
 ax1.set_xlabel("Time [samples]")
 ax1.set_ylabel("Incident Wave [V]")
 (a_plot,) = ax1.plot(test_x[:, 0], label="a")
@@ -90,6 +94,7 @@ plt.title("Diode Network Synthetic Training Data")
 # plt.savefig(f'{plots_dir}/diodes_synth_training_data.png')
 
 # %%
+# Generate target data:
 ideal_y = np.zeros_like(test_x[:, 0])
 ideal_y2 = np.zeros_like(test_x[:, 0])
 for n in range(len(ideal_y)):
@@ -100,10 +105,12 @@ for n in range(len(ideal_y)):
 test_x[:, 1] = np.log(test_x[:, 1])
 
 # %%
+# Plot target data:
 plt.plot(test_x[:, 0])
 plt.plot(ideal_y)
 
 # %%
+# Construct diode model:
 layer_xs = []
 inputs = tf.keras.Input(shape=(2,))
 for n in range(n_layers + 2):
@@ -120,6 +127,7 @@ diode_model = tf.keras.Model(inputs=inputs, outputs=layer_xs[-1])
 diode_model.summary()
 
 # %%
+# Define loss functions:
 mse_loss = tf.keras.losses.MeanSquaredError()
 
 eps = np.finfo(np.float32).eps
@@ -146,11 +154,13 @@ def my_loss(target_y, predicted_y):
 
 
 # %%
+# Train model:
 optimizer = tf.keras.optimizers.Adam(learning_rate=2e-5)
 diode_model.compile(optimizer, my_loss)
 diode_model.fit(test_x, ideal_y, epochs=2000)
 
 # %%
+# Print statistics after training:
 y_test = diode_model(test_x).numpy().flatten()
 
 pre_loss_mse = mse_loss(ideal_y, y_test).numpy()
@@ -158,6 +168,7 @@ pre_loss_esr = esr_loss(ideal_y, tf.cast(y_test, tf.float32)).numpy()
 print(f"Loss after training: {pre_loss_mse}, {pre_loss_esr}")
 
 # %%
+# Plot results:
 plt.plot(-ideal_y, label="Target")
 plt.plot(-y_test, "--", label="Predicted")
 

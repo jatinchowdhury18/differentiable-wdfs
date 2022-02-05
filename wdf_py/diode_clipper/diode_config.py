@@ -1,3 +1,5 @@
+'''NamedTuples containing information for the different diode configurations'''
+
 from collections import namedtuple
 
 DiodeConfig = namedtuple(
@@ -7,9 +9,11 @@ DiodeConfig = namedtuple(
 )
 
 default_diode = DiodeConfig("DefaultDiode")
+
+# 1N4148 parameters borrowed from: https://github.com/neiser/spice-padiwa-amps/blob/master/1N4148.lib
 diode_1n4148_1u1d = DiodeConfig(
     "1N4148 (1U-1D)", Is=4.352e-9, nabla=1.906
-)  # borrowed from: https://github.com/neiser/spice-padiwa-amps/blob/master/1N4148.lib
+)
 diode_1n4148_1u2d = DiodeConfig(
     "1N4148 (1U-2D)", Is=4.352e-9, nabla=1.906, N_up=1, N_down=2
 )

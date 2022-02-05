@@ -1,6 +1,7 @@
 # %%
-import sys
+'''Script for training a diode model on actual diode clipper circuit data'''
 
+import sys
 sys.path.insert(0, "../lib")
 sys.path.insert(0, "./models")
 
@@ -31,6 +32,7 @@ from dataimport import load_diode_data
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 
 # %%
+# Model parameter:
 n_layers = 2
 layer_size = 16
 diode = diode_1n4148_3u3d
@@ -44,6 +46,7 @@ assert not plots_dir.exists(), "Plots for this training run have already been cr
 plots_dir.mkdir()
 
 # %%
+# Load circuit data:
 C_val = 4.7e-9
 train_data, train_N, val_data, val_N, FS = load_diode_data(diode, BASE_DIR)
 
@@ -51,6 +54,7 @@ print(train_data.shape)
 print(val_data.shape)
 
 # %%
+# Batch data:
 batch_size = 2048
 
 
@@ -80,11 +84,13 @@ train_X, train_Y = batch_data(train_data, train_N)
 val_X, val_Y = batch_data(val_data, val_N)
 
 # %%
+# Plot batched data:
 plot_batch = 148
 plt.plot(val_X[plot_batch, :, 0])
 plt.plot(val_Y[plot_batch, :, 0])
 
 # %%
+# Define WDF circuit model:
 class ClipperModel(tf.Module):
     def __init__(self, json):
         super(ClipperModel, self).__init__()
@@ -122,6 +128,7 @@ class ClipperModel(tf.Module):
 
 
 # %%
+# Load pre-trained model:
 with open(f"./models/pretrained/{pretrained_model}_model.json", "r") as read_file:
     model_json = json.load(read_file)
 
@@ -130,6 +137,7 @@ with open(f"./models/pretrained/{pretrained_model}_model.json", "r") as read_fil
 model = ClipperModel(model_json)
 
 # %%
+# Define loss functions:
 def pre_emphasis_filter(x, coeff=0.85):
     return tf.concat([x[0:1], x[1:] - coeff * x[:-1]], axis=0)
 
@@ -172,6 +180,7 @@ loss_func = lambda target, pred: mse_loss(target, pred) + esr_loss(target, pred)
 optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.5, beta_2=0.999)
 
 # %%
+# Useful methods for plotting at checkpoints:
 def plot_target_pred_val(target, predicted, epoch):
     plt.figure()
     plt.plot(target[:batch_size], label="Target")
@@ -219,6 +228,7 @@ def plot_target_pred(target, predicted, val_target, val_predicted, epoch):
 
 
 # %%
+# Set up training history:
 skip_samples = 50  # skip the first few samples to let state build up
 history = {
     "loss": [],
@@ -231,6 +241,7 @@ history = {
 
 
 # %%
+# Training loop:
 for epoch in tqdm(range(501)):
     with tf.GradientTape() as tape:
         outs = tf.transpose(model.forward(train_X)[..., 0], perm=[1, 0, 2])
@@ -273,9 +284,9 @@ with open(f"./histories/{model_name}_history.pkl", "wb") as f:
     pickle.dump(history, f)
 
 # %%
+# Plot final results:
 val_outs = tf.transpose(model.forward(val_X)[..., 0], perm=[1, 0, 2])
 
-# %%
 target = val_Y[plot_batch, skip_samples:, 0]
 pred = val_outs[plot_batch, skip_samples:, 0]
 plot_target_pred_val(target, pred, "final")
@@ -283,6 +294,7 @@ plot_target_pred_val(target, pred, "final")
 # plt.xlim(11150, 11900)
 
 # %%
+# Save final model weights:
 def save_model_json(model):
     def get_weights(layer):
         weights = layer.kernel.numpy()[0]

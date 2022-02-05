@@ -1,9 +1,11 @@
 # %%
+'''Script for plotting the history of a diode model training process'''
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 
-# %%()
+# %%
+# Load training history:
 name = "Test History"
 history_file = "./histories/1N4148 (1U-1D)_2x16_training_1_hpf_history.pkl"
 
@@ -11,6 +13,7 @@ with open(history_file, "rb") as f:
     history = pickle.load(f)
 
 # %%
+# Load history data:
 loss = history["loss"]
 mse = history["mse"]
 esr = history["esr"]
@@ -19,6 +22,7 @@ mse = history["val_mse"]
 esr = history["val_esr"]
 
 # %%
+# Plot training history:
 fig, ax1 = plt.subplots()
 
 ax1.set_xlabel("Epoch")
@@ -34,6 +38,7 @@ ax1.legend(handles=[mse_plot, esr_plot])
 plt.title(f"{name} Training History")
 
 # %%
+# Print loss at checkpoints:
 print(np.format_float_scientific(history["val_loss"][0]))
 print(np.format_float_scientific(history["val_loss"][100]))
 print(np.format_float_scientific(history["val_loss"][500]))
