@@ -1,4 +1,5 @@
-# %%
+'''Useful methods for importing the diode datasets'''
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -94,7 +95,7 @@ def load_diode_data(
 
         R_val = float(csv_path.parts[-1].partition("k")[0])
 
-        if R_val < 36 or R_val > 73:
+        if R_val < 36 or R_val > 73: # R values to use for training
             print(R_val)
             raw_data = createDataset(csv_path, plot=plot)
             FS = raw_data["FS"]
@@ -112,7 +113,7 @@ def load_diode_data(
             csv_data_df = pd.DataFrame(data=csv_data)
             train_data = pd.concat([train_data, csv_data_df], axis=1)
 
-        else:
+        else: # R values to use for validation
             print(str(R_val) + "(validation!)")
             raw_data = createDataset(csv_path, plot=plot)
             FS = raw_data["FS"]
@@ -135,13 +136,3 @@ def load_diode_data(
 
     return train_data_np, train_num_samples, val_data_np, val_num_samples, FS
 
-
-# %%
-# path = "/Users/chris/Desktop/git/differentiable-wdfs/diode_dataset/1N4148/1up1down/10.0k_4.7nF.csv"
-
-# raw_data = createDataset(path)
-# print(raw_data['dataset'])
-# print(raw_data)
-
-
-# %%

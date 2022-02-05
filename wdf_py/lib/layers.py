@@ -1,3 +1,5 @@
+'''Custom layers for constructing differentiable WDF models'''
+
 import numpy as np
 import tensorflow as tf
 
@@ -38,6 +40,8 @@ class DenseLayer(tf.Module):
 
 
 class DenseRootModel(tf.Module):
+    '''Simple Root WDF model using dense layers'''
+
     def __init__(self, json):
         super(DenseRootModel, self).__init__()
 

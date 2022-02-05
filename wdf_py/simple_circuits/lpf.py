@@ -1,6 +1,7 @@
 # %%
-import sys
+'''Example script for using differentiable WDFs to determine the parameters of an RC lowpass filter'''
 
+import sys
 sys.path.insert(0, "../lib")
 
 import numpy as np
@@ -14,7 +15,8 @@ import scipy.signal as signal
 FS = 48000
 
 # %%
-# based loosely on: https://github.com/andreofner/APC/blob/master/IIR.py
+# Construct Differentiable WDF circuit model:
+# (based loosely on: https://github.com/andreofner/APC/blob/master/IIR.py)
 class Model(tf.Module):
     def __init__(self):
         super(Model, self).__init__()
@@ -48,6 +50,7 @@ class Model(tf.Module):
 
 
 # %%
+# Generate data:
 batch_size = 256
 n_batches = 5
 freq = 720
@@ -70,6 +73,7 @@ plt.plot(data_in_batched[0])
 plt.plot(data_target[:, 0])
 
 # %%
+# Training loop:
 model = Model()
 loss_func = tf.keras.losses.MeanSquaredError()
 R_optimizer = tf.keras.optimizers.Adam(learning_rate=25.0)
@@ -79,7 +83,6 @@ Rs = []
 Cs = []
 losses = []
 
-# for epoch in tqdm.tqdm(range(250)):
 for epoch in tqdm.tqdm(range(100)):
     with tf.GradientTape() as tape:
         outs = model.forward(data_in)[..., 0]
@@ -103,7 +106,9 @@ print(f"\nFinal Results:")
 print(f"    Loss: {loss}")
 print(f"    Grads: {[g.numpy() for g in grads]}")
 print(f"    Trainables: {[t.numpy() for t in model.trainable_variables]}")
+
 # %%
+# Print results:
 final_freq = 1.0 / (2 * np.pi * model.R1.R * model.C1.C)
 print(final_freq)
 
@@ -112,6 +117,7 @@ plt.plot(data_target[:, 0])
 plt.plot(outs, "--")
 
 # %%
+# Plot results:
 fig, ax = plt.subplots()
 fig.subplots_adjust(right=0.75)
 

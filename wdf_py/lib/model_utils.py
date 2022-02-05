@@ -1,3 +1,5 @@
+'''Methods for saving TensorFlow model weights to JSON'''
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras

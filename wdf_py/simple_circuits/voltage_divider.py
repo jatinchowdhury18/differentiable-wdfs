@@ -1,6 +1,7 @@
 # %%
-import sys
+'''Example script for using differentiable WDFs to determine the parameters of a voltage divider'''
 
+import sys
 sys.path.insert(0, "../lib")
 
 import numpy as np
@@ -10,7 +11,8 @@ import tqdm as tqdm
 import matplotlib.pyplot as plt
 
 # %%
-# based loosely on: https://github.com/andreofner/APC/blob/master/IIR.py
+# Construct Differentiable WDF circuit model:
+# (based loosely on: https://github.com/andreofner/APC/blob/master/IIR.py)
 class Model(tf.Module):
     def __init__(self):
         super(Model, self).__init__()
@@ -44,6 +46,7 @@ class Model(tf.Module):
 
 
 # %%
+# Generate data:
 batch_size = 128
 n_batches = 4
 FS = 48000
@@ -62,6 +65,7 @@ plt.plot(data_in_batched[0])
 plt.plot(data_target[:, 0])
 
 # %%
+# Training loop:
 model = Model()
 loss_func = tf.keras.losses.MeanSquaredError()
 optimizer = tf.keras.optimizers.Adam(learning_rate=25.0)
@@ -92,12 +96,14 @@ print(f"\nFinal Results:")
 print(f"    Loss: {loss}")
 print(f"    Grads: {[g.numpy() for g in grads]}")
 print(f"    Trainables: {[t.numpy() for t in model.trainable_variables]}")
+
 # %%
 outs = model.forward(data_in)[..., 0]
 plt.plot(data_target[:, 0])
 plt.plot(outs, "--")
 
 # %%
+# Plot results:
 fig, ax1 = plt.subplots()
 
 ax1.set_xlabel("Epoch")

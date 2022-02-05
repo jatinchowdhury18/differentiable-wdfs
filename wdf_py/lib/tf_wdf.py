@@ -1,13 +1,17 @@
+'''Differentiable WDF elements in TensorFlow'''
+
 import tensorflow as tf
 
 tf.get_logger().setLevel("WARN")
 
 
 def voltage(wdf):
+    '''Returns the voltage across a given WDF element'''
     return (wdf.a + wdf.b) * tf.constant(0.5)
 
 
 class IdealVoltageSource(tf.Module):
+    '''Differentiable WDF ideal voltage source'''
     def __init__(self):
         super(IdealVoltageSource, self).__init__()
         self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
@@ -25,6 +29,7 @@ class IdealVoltageSource(tf.Module):
 
 
 class ResistiveVoltageSource(tf.Module):
+    '''Differentiable WDF resistive voltage source, with optionally trainable resistance value'''
     def __init__(self, initial_R=1.0e-9, trainable=False):
         super(ResistiveVoltageSource, self).__init__()
         self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
@@ -55,6 +60,7 @@ class ResistiveVoltageSource(tf.Module):
 
 
 class Resistor(tf.Module):
+    '''Differentiable WDF resistor, with optionally trainable resistance value'''
     def __init__(self, initial_R, trainable=False):
         super(Resistor, self).__init__()
         self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
@@ -83,6 +89,7 @@ class Resistor(tf.Module):
 
 
 class Capacitor(tf.Module):
+    '''Differentiable WDF capacitor, with optionally trainable capacitance value'''
     def __init__(self, initial_C, FS, trainable=False):
         super(Capacitor, self).__init__()
         self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
@@ -120,6 +127,7 @@ class Capacitor(tf.Module):
 
 
 class Series(tf.Module):
+    '''Differentiable WDF 3-port series adapter'''
     def __init__(self, P1, P2):
         super(Series, self).__init__()
         self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
@@ -148,6 +156,7 @@ class Series(tf.Module):
 
 
 class Parallel(tf.Module):
+    '''Differentiable WDF 3-port parallel adapter'''
     def __init__(self, P1, P2):
         super(Parallel, self).__init__()
         self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
@@ -184,6 +193,7 @@ class Parallel(tf.Module):
 
 
 class Inverter(tf.Module):
+    '''Differentiable WDF 2-port polarity inverter'''
     def __init__(self, P1):
         super(Inverter, self).__init__()
         self.a = tf.Variable(initial_value=tf.zeros(1), name="incident_wave")
