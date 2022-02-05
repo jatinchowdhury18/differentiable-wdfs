@@ -16,7 +16,6 @@ include(cmake/WarningFlags.cmake)
 add_library(juce_plugin_modules STATIC)
 target_link_libraries(juce_plugin_modules
     PRIVATE
-        BinaryData
         juce::juce_audio_utils
         juce::juce_audio_plugin_client
         juce::juce_dsp
@@ -69,15 +68,4 @@ if(ASIOSDK_DIR)
     message(STATUS "Using ASIO SDK from ${ASIOSDK_DIR}")
     target_include_directories(juce_plugin_modules PUBLIC ${ASIOSDK_DIR}/common)
     target_compile_definitions(juce_plugin_modules PUBLIC JUCE_ASIO=1)
-endif()
-
-if(IOS)
-    target_link_libraries(juce_plugin_modules PRIVATE juce::juce_product_unlocking)
-    target_compile_definitions(juce_plugin_modules PUBLIC JUCE_IN_APP_PURCHASES=1)
-endif()
-
-if(NOT APPLE)
-    message(STATUS "Linking with OpenGL")
-    target_link_libraries(juce_plugin_modules PRIVATE juce::juce_opengl)
-    target_compile_definitions(juce_plugin_modules PUBLIC FOLEYS_ENABLE_OPEN_GL_CONTEXT=1)
 endif()
