@@ -46,8 +46,8 @@ The audio plugin can be built using the CMake build system.
 
 ```bash
 # Clone the repository
-$ git clone https://github.com/Chowdhury-DSP/BYOD.git
-$ cd BYOD
+$ git clone https://github.com/jatinchowdhury18/differentiable-wdfs.git
+$ cd differentiable-wdfs
 
 # initialize and set up submodules
 $ git submodule update --init --recursive
