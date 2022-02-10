@@ -78,5 +78,5 @@ class DenseRootModel(tf.Module):
         for l in self.layers:
             x = l(x)
 
-        self.b = -1 * x
+        self.b = x
         return self.b

@@ -118,7 +118,7 @@ class ClipperModel(tf.Module):
 
             model_in = tf.concat((self.P1.reflected(), tf.math.log(self.P1.R)), axis=1)
             self.model.incident(tf.transpose(model_in, perm=[0, 2, 1]))
-            self.P1.incident(self.model.reflected())
+            self.P1.incident(-1 * self.model.reflected())
 
             output = wdf.voltage(self.C)
             output_sequence = output_sequence.write(i, output)
