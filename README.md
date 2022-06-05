@@ -1,5 +1,7 @@
 # Differentiable Wave Digital Filters
 
+[![Paper](https://zenodo.org/badge/DOI/10.5281/zenodo.6566846.svg)](https://zenodo.org/record/6567226)
+
 This repository contains an exploration of
 implementing differentiable wave digital filters
 (WDFs), in an effort to integrate WDFs with
@@ -64,6 +66,20 @@ $ cmake --build build --config Release --parallel 4
 ```
 
 The resulting builds can be found in the `build/plugin/DifferentiableWDFs_artefacts` directory.
+
+## Citation
+
+If you are using this code as part of an academic work, please cite the repository as follows:
+```
+@InProceedings{chowdhury:clarke:diffwdfs:2022,
+    author = {Jatin Chowdhury and Christopher Johann Clarke},
+    title = {Emulating Diode Circuits with Differentiable Wave Digital Filters},
+    booktitle = {19th Sound and Music Computing Conference},
+    year = {2022},
+    pages = {2-9},
+    url = {https://zenodo.org/record/6566846},
+}
+```
 
 # License
 The code in this repository is licensed under BSD 3-clause license.
