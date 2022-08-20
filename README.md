@@ -1,6 +1,6 @@
 # Differentiable Wave Digital Filters
 
-[![Paper](https://zenodo.org/badge/DOI/10.5281/zenodo.6566846.svg)](https://zenodo.org/record/6567226)
+[![Paper](https://zenodo.org/badge/DOI/10.5281/zenodo.6797472.svg)](https://zenodo.org/record/6797472)
 
 This repository contains an exploration of
 implementing differentiable wave digital filters
