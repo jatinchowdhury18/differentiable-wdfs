@@ -18,11 +18,11 @@ plugin/         # Audio plugin (JUCE/C++) containing real-time WDF models
 wdf_py/         # Differentiable WDF library, and scripts for training WDFs
 ```
 
-## Settings up the Python environment
+## Setting up the Python environment
 
 The code in this repo has been tested using Python
 version 3.9.5. While it is possible to just run
-this code on your machine as-is, we reccomend
+this code on your machine as-is, we recommend
 using `virtualenv` to help manage dependencies
 and versions.
 
